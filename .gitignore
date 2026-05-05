@@ -1,0 +1,84 @@
+# Composer
+composer.phar
+composer.lock
+vendor/
+
+# PHP
+*.php~
+*.php.save
+*.php.swp
+.phpunit.result.cache
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+.project
+.settings/
+.classpath
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
+var/log/
+logs/
+
+# Cache
+.cache/
+.cache.php
+
+# PHPUnit
+.phpunit.result.cache
+coverage/
+.phpcs-cache
+.php-cs-fixer.cache
+
+# Build and deployment
+/build/
+/dist/
+*.tar.gz
+*.zip
+
+# Documentation
+/docs/_build/
+/api/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+/tests/coverage/
+/phpunit.xml
+.phpunit.result.cache
+
+# Code coverage
+.clover
+.coveralls.yml
+coverage.xml
+
+# PHP CS Fixer
+.php-cs-fixer.cache
+.php_cs.cache
+
+# Infection
+/infection.log
+/infection.json
+
+# Psalm
+/psalm.xml
+/psalm-report.xml
+
+# Rector
+/rector.php
+rector.php
+
+# PHPStan
+/phpstan.neon
+/phpstan.neon.dist
+.tmp

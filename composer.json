@@ -1,0 +1,31 @@
+{
+    "name": "histel951/dota-2-api",
+    "autoload": {
+        "psr-4": {
+            "Histel951\\Dota2Api\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Histel951\\Dota2Api\\Tests\\": "tests/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Histel951",
+            "email": "histel951@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "symfony/http-kernel": "^6.4|^7.0",
+        "symfony/config": "^6.4|^7.0",
+        "symfony/dependency-injection": "^^6.4|^7.0",
+        "symfony/http-client": "^6.4|^7.0"
+    },
+    "require-dev": {
+        "symfony/framework-bundle": "^6.4|^7.0",
+        "phpunit/phpunit": "^9.6",
+        "symfony/phpunit-bridge": "^6.4|^7.0"
+    }
+}
