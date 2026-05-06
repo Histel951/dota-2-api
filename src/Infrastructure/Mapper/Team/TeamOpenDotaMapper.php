@@ -13,7 +13,7 @@ use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
 use Throwable;
 
-final class TeamOpenDotaMapper extends AbstractMapper
+class TeamOpenDotaMapper extends AbstractMapper
 {
     /**
      * Required fields for validation

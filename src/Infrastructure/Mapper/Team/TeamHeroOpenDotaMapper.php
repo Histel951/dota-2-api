@@ -12,7 +12,7 @@ use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
 use Throwable;
 
-final class TeamHeroOpenDotaMapper extends AbstractMapper
+class TeamHeroOpenDotaMapper extends AbstractMapper
 {
     private const array REQUIRED_FIELDS = [
         'hero_id',

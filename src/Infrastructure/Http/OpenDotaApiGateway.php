@@ -10,10 +10,10 @@ use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
-final readonly class OpenDotaApiGateway
+class OpenDotaApiGateway
 {
     public function __construct(
-        private OpenDotaHttpClient $httpClient,
+        private readonly OpenDotaHttpClient $httpClient,
     )
     {
     }

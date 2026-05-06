@@ -12,15 +12,15 @@ final readonly class TeamStats
     private function __construct(
         private int $wins,
         private int $losses,
-        private int $rating,
+        private float $rating,
     )
     {
-        if ($wins < 0 || $losses < 0 || $rating === 0) {
+        if ($wins < 0 || $losses < 0) {
             throw new InvalidTeamStatsException('Value must be positive');
         }
     }
 
-    public function getRating(): int
+    public function getRating(): float
     {
         return $this->rating;
     }
@@ -38,7 +38,7 @@ final readonly class TeamStats
     /**
      * @throws InvalidTeamStatsException
      */
-    public static function fromApi(int $wins, int $losses, int $rating): self
+    public static function fromApi(int $wins, int $losses, float $rating): self
     {
         return new self($wins, $losses, $rating);
     }

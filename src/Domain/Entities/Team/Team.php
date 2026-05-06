@@ -9,14 +9,14 @@ use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamStats;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
 
-final readonly class Team
+final class Team
 {
     public function __construct(
-        private TeamId            $id,
-        private ?TeamName         $name,
-        private TeamTag           $tag,
-        private TeamStats         $stats,
-        private DateTimeImmutable $lastMatchTime,
+        private readonly TeamId            $id,
+        private readonly ?TeamName         $name,
+        private readonly TeamTag           $tag,
+        private readonly TeamStats         $stats,
+        private readonly DateTimeImmutable $lastMatchTime,
     )
     {
     }
