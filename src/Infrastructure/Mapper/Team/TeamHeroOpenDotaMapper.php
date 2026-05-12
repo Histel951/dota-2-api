@@ -25,7 +25,7 @@ class TeamHeroOpenDotaMapper extends AbstractMapper
      * @throws MappingException
      * @throws InvalidStatsException
      */
-    function toEntity(array $data): TeamHero
+    public function toEntity(array $data): TeamHero
     {
         $this->validate($data, self::REQUIRED_FIELDS);
 
