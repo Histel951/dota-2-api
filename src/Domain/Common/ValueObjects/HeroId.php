@@ -8,7 +8,6 @@ use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidHeroIdException;
 final readonly class HeroId
 {
     private const int MIN_ID = 1;
-    private const int MAX_ID = 127;
 
     private int $value;
 
@@ -20,12 +19,6 @@ final readonly class HeroId
         if ($value < self::MIN_ID) {
             throw new InvalidHeroIdException(
                 sprintf('Hero ID must be at least %d, %d given', self::MIN_ID, $value)
-            );
-        }
-
-        if ($value > self::MAX_ID) {
-            throw new InvalidHeroIdException(
-                sprintf('Hero ID cannot exceed %d, %d given', self::MAX_ID, $value)
             );
         }
 
