@@ -9,10 +9,10 @@ use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\MatchPlayersException;
 final readonly class MatchPlayers
 {
     /**
-     * @param MatchPlayerPerformance[] $players
+     * @param MatchPlayerPerformance[] $value
      */
     public function __construct(
-        private array $players,
+        private array $value,
     )
     {
     }
@@ -22,7 +22,7 @@ final readonly class MatchPlayers
      */
     public function getByRole(RoleEnum $role, bool $isRadiant): MatchPlayerPerformance
     {
-        foreach ($this->players as $player) {
+        foreach ($this->value as $player) {
             if ($player->getRole()->getValue() === $role && $player->isRadiant() === $isRadiant) {
                 return $player;
             }
@@ -31,8 +31,8 @@ final readonly class MatchPlayers
         throw new MatchPlayersException('Player not found');
     }
 
-    public function getPlayers(): array
+    public function getValue(): array
     {
-        return $this->players;
+        return $this->value;
     }
 }
