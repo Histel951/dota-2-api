@@ -11,7 +11,7 @@ use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamStats;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Http\OpenDotaApiGateway;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
@@ -33,7 +33,7 @@ class OpenDotaTeamProviderTest extends TestCase
 
     public function setUp(): void
     {
-        $this->gateway = $this->createMock(OpenDotaApiGateway::class);
+        $this->gateway = $this->createMock(ApiGateway::class);
         $this->teamMapper = $this->createMock(TeamOpenDotaMapper::class);
         $this->matchesMapper = $this->createMock(TeamMatchOpenDotaMapper::class);
         $this->playerMapper = $this->createMock(TeamPlayerOpenDotaMapper::class);
