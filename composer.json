@@ -1,5 +1,8 @@
 {
     "name": "histel951/dota-2-api",
+    "description": "Dota 2 API client for OpenDota and STRATZ",
+    "type": "library",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "Histel951\\Dota2Api\\": "src/"
@@ -18,14 +21,13 @@
     ],
     "require": {
         "php": ">=8.3",
-        "symfony/http-kernel": "^6.4|^7.0",
-        "symfony/config": "^6.4|^7.0",
-        "symfony/dependency-injection": "^6.4|^7.0",
-        "symfony/http-client": "^6.4|^7.0"
+        "symfony/http-client": "^6.4|^7.0",
+        "symfony/http-client-contracts": "^3.0"
     },
     "require-dev": {
-        "symfony/framework-bundle": "^6.4|^7.0",
-        "phpunit/phpunit": "^9.6",
+        "phpunit/phpunit": "^11.0",
         "symfony/phpunit-bridge": "^6.4|^7.0"
-    }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
 }
