@@ -18,4 +18,4 @@ $client = (new Dota2ApiClientBuilder())
 
 $matchesProvider = $client->matches();
 $detail = $matchesProvider->getMatch(new MatchId(8787299097));
-var_dump($detail->getDraft()->getPicks());
+var_dump($detail->getPlayers()->getValue());

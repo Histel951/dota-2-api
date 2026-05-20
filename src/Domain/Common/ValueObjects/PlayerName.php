@@ -5,7 +5,7 @@ namespace Histel951\Dota2Api\Domain\Common\ValueObjects;
 
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerProNameException;
 
-final readonly class PlayerProName
+final readonly class PlayerName
 {
     private string $value;
 

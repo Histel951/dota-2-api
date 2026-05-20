@@ -35,11 +35,18 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
+use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
 
 class MatchOpenDotaMapper extends AbstractMapper
 {
+    public function __construct(
+        private readonly RoleResolverInterface $roleResolver
+    )
+    {
+    }
+
     private const array REQUIRED_FIELDS = [
         'match_id',
         'duration',
@@ -82,9 +89,7 @@ class MatchOpenDotaMapper extends AbstractMapper
 
             if ($playerEntity->isRadiant()) {
                 $radiantPlayers[] = $playerEntity;
-            }
-
-            if (false === $playerEntity->isRadiant()) {
+            } else {
                 $direPlayers[] = $playerEntity;
             }
         }
@@ -125,7 +130,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             won: $data['radiant_win'],
             picks: $radiantPicks,
             bans: $radiantBans,
-            players: $radiantPlayers,
+            players: $this->roleResolver->resolve($radiantPlayers),
             side: SideEnum::RADIANT,
         );
 
@@ -135,7 +140,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             won: !$data['radiant_win'],
             picks: $direPicks,
             bans: $direBans,
-            players: $direPlayers,
+            players: $this->roleResolver->resolve($direPlayers),
             side: SideEnum::DIRE,
         );
 
@@ -188,8 +193,10 @@ class MatchOpenDotaMapper extends AbstractMapper
             gpm: new Gpm($playerData['gold_per_min']),
             xpm: new Xpm($playerData['xp_per_min']),
             lane: new MatchPlayerLane(LaneEnum::from($playerData['lane'])),
-            role: new Role(RoleEnum::UNKNOWN), // todo: ЗАГЛУШКА!! сделать RoleResolver который будет определять роль игрока в матче на основе общей статистики
+            role: new Role(RoleEnum::UNKNOWN),
             side: $playerData['isRadiant'] ? SideEnum::RADIANT : SideEnum::DIRE,
+            playerProName: $playerData['name'],
+            playerPersonaName: $playerData['personaname'],
         );
     }
 
