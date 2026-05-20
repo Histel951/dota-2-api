@@ -7,15 +7,20 @@ use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamIdException;
 
 final readonly class TeamId
 {
-    private string $value;
+    private ?string $value;
 
     /**
      * @throws InvalidTeamIdException
      */
     public function __construct(
-        string|int $value
+        string|int $value = null
     )
     {
+        if (null === $value) {
+            $this->value = null;
+            return;
+        }
+
         $normalized = (string) $value;
 
         if (trim($normalized) === '') {
