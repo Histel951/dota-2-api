@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Infrastructure\Http;
 
+use Exception;
+use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpStatusCode;
 use RuntimeException;
 use Symfony\Component\HttpClient\Exception\ClientException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -11,33 +13,28 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 class OpenDotaHttpClient implements HttpClientInterface
 {
-    private const string BASE_URL = 'https://api.opendota.com/api';
-    private const int DEFAULT_TIMEOUT = 30;
-    private const int MAX_RETRIES = 3;
+    private array $options;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly ?string $apiKey = null,
-        ?string $baseUrl = null,
-        ?string $timeout = null,
-        private array $options = []
+        private readonly ConfigurationHttpClient $cfg,
     ) {
         $this->options = array_merge([
-            'base_uri' => $baseUrl ?? self::BASE_URL,
-            'timeout' => $timeout ?? self::DEFAULT_TIMEOUT,
-        ], $options);
+            'base_uri' => $cfg->getBaseUrl(),
+            'timeout' => $cfg->getTimeout(),
+        ], $cfg->getOptions());
     }
 
     /**
      * {@inheritdoc}
-     * @throws RuntimeException|ClientException
+     * @throws RuntimeException|ClientException|Exception
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
-        if ($this->apiKey !== null) {
+        if ($this->cfg->getApiKey() !== null) {
             $options['query'] = array_merge(
                 $options['query'] ?? [],
-                ['api_key' => $this->apiKey]
+                ['api_key' => $this->cfg->getApiKey()]
             );
         }
 
@@ -46,20 +43,24 @@ class OpenDotaHttpClient implements HttpClientInterface
         $attempts = 0;
         $lastException = null;
 
-        while ($attempts < self::MAX_RETRIES) {
+        while ($attempts < $this->cfg->getMaxRetries()) {
             try {
                 return $this->httpClient->request($method, $url, $finalOptions);
             } catch (ClientException $e) {
                 $lastException = $e;
                 $statusCode = $e->getCode();
 
-                if ($statusCode !== 429 && $statusCode >= 400 && $statusCode < 500) {
+                if (
+                    $statusCode !== HttpStatusCode::TOO_MANY_REQUESTS->value
+                    && $statusCode >= HttpStatusCode::NOT_FOUND->value
+                    && $statusCode < HttpStatusCode::INTERNAL_SERVER_ERROR->value
+                ) {
                     throw $e;
                 }
 
                 $attempts++;
 
-                if ($attempts >= self::MAX_RETRIES) {
+                if ($attempts >= $this->cfg->getMaxRetries()) {
                     throw $e;
                 }
 

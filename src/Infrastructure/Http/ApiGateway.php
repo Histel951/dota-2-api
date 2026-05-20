@@ -4,13 +4,14 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\Http;
 
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
-use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpFoundation\Response;
+use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
+use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
+use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpStatusCode;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Throwable;
 
-class OpenDotaApiGateway
+class ApiGateway implements ApiGatewayInterface
 {
     public function __construct(
         private readonly OpenDotaHttpClient $httpClient,
@@ -23,7 +24,7 @@ class OpenDotaApiGateway
      */
     public function get(string $endpoint): array
     {
-        $response = $this->sendRequest(Request::METHOD_GET, $endpoint);
+        $response = $this->sendRequest(HttpMethod::GET->value, $endpoint);
         return $this->parseResponse($response);
     }
 
@@ -69,11 +70,11 @@ class OpenDotaApiGateway
             throw new ApiGatewayException($e->getMessage());
         }
 
-        if ($statusCode === Response::HTTP_NOT_FOUND) {
+        if ($statusCode === HttpStatusCode::NOT_FOUND->value) {
             throw new ApiGatewayException('Object not found');
         }
 
-        if ($statusCode !== Response::HTTP_OK) {
+        if ($statusCode !== HttpStatusCode::OK->value) {
             throw new ApiGatewayException(
                 sprintf('API returned unexpected status code %d', $statusCode)
             );

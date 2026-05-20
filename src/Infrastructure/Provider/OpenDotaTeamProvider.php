@@ -11,7 +11,7 @@ use Histel951\Dota2Api\Domain\Entities\TeamPlayer\TeamPlayer;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Http\OpenDotaApiGateway;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
@@ -20,7 +20,7 @@ use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamPlayerOpenDotaMapper;
 class OpenDotaTeamProvider implements TeamProviderInterface
 {
     public function __construct(
-        private readonly OpenDotaApiGateway       $gateway,
+        private readonly ApiGateway               $gateway,
         private readonly TeamOpenDotaMapper       $teamMapper,
         private readonly TeamMatchOpenDotaMapper  $matchesMapper,
         private readonly TeamPlayerOpenDotaMapper $playerMapper,
