@@ -17,13 +17,14 @@ use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Http\OpenDotaApiGateway;
+use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
 
 class OpenDotaMatchProvider implements MatchesProviderInterface
 {
     public function __construct(
-        private readonly OpenDotaApiGateway  $gateway,
+        private readonly ApiGatewayInterface $gateway,
         private readonly MatchOpenDotaMapper $mapper
     )
     {
@@ -44,7 +45,7 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
      */
     public function getMatch(MatchId $id): MatchDetail
     {
-        $result = $this->gateway->get('match/' . $id->getValue());
+        $result = $this->gateway->get('matches/' . $id->getValue());
         return $this->mapper->toEntity($result);
     }
 }

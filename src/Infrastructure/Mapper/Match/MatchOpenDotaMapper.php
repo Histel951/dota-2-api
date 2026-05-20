@@ -25,9 +25,11 @@ use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\LaneEnum;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\SideEnum;
+use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\InvalidDraftOrderException;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftDecision;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftOrder;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
@@ -64,6 +66,7 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidPlayerIdException
      * @throws InvalidTeamIdException
      * @throws InvalidTeamNameException
+     * @throws InvalidDraftOrderException
      */
     function toEntity(array $data): MatchDetail
     {
@@ -192,12 +195,13 @@ class MatchOpenDotaMapper extends AbstractMapper
 
     /**
      * @throws InvalidHeroIdException
+     * @throws InvalidDraftOrderException
      */
     private function createDraftDecision(array $data): DraftDecision
     {
         return new DraftDecision(
             heroId: new HeroId($data['hero_id']),
-            draftOrder: $data['order'],
+            draftOrder: new DraftOrder($data['order']),
             side: SideEnum::from($data['team']),
             isPick: $data['is_pick'],
         );
