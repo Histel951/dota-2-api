@@ -5,7 +5,7 @@ namespace Histel951\Dota2Api\Infrastructure\Mapper\Team;
 
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidStatsException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerProName;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\WinrateStats;
 use Histel951\Dota2Api\Domain\Entities\TeamPlayer\TeamPlayer;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
@@ -48,7 +48,7 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
         try {
             return new TeamPlayer(
                 playerId: new PlayerId($data['account_id']),
-                playerProName: new PlayerProName($optional['name']),
+                playerProName: new PlayerName($optional['name']),
                 playerStats: $stats,
                 isCurrentTeamMember: $data['is_current_team_member']
             );
