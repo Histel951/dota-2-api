@@ -3,28 +3,21 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Domain\Entities\Match\ValueObjects;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\GPM;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 
 final readonly class MatchPlayerPerformance
 {
     public function __construct(
-        private PlayerId        $playerId,
-        private HeroId          $heroId,
-        private KDA             $kda,
-        private GPM             $gpm,
-        private XPM             $xpm,
-        private MatchPlayerLane $lane,
-        private Role            $role,
-        private Side            $side,
-        private ?PlayerName     $playerProName,
-        private PlayerName      $playerPersonaName,
+        private Identity               $identity,
+        private KDA                    $kda,
+        private Role                   $role,
+        private ObjectivesStats        $objectives,
+        private CreepsStats            $creeps,
+        private MatchPlayerEconomy     $economy,
+        private WardingStats           $warding,
+        private DamageStats            $damage,
+        private UtilityStats           $utility,
     )
     {
     }
@@ -32,27 +25,16 @@ final readonly class MatchPlayerPerformance
     public function withRole(Role $role): self
     {
         return new self(
-            playerId: $this->playerId,
-            heroId: $this->heroId,
+            identity: $this->identity,
             kda: $this->kda,
-            gpm: $this->gpm,
-            xpm: $this->xpm,
-            lane: $this->lane,
             role: $role,
-            side: $this->side,
-            playerProName: $this->playerProName,
-            playerPersonaName: $this->playerPersonaName,
+            objectives: $this->objectives,
+            creeps: $this->creeps,
+            economy: $this->economy,
+            warding: $this->warding,
+            damage: $this->damage,
+            utility: $this->utility,
         );
-    }
-
-    public function getPlayerId(): PlayerId
-    {
-        return $this->playerId;
-    }
-
-    public function getHeroId(): HeroId
-    {
-        return $this->heroId;
     }
 
     public function getKda(): KDA
@@ -60,43 +42,43 @@ final readonly class MatchPlayerPerformance
         return $this->kda;
     }
 
-    public function getGpm(): GPM
-    {
-        return $this->gpm;
-    }
-
-    public function getXpm(): XPM
-    {
-        return $this->xpm;
-    }
-
-    public function getLane(): MatchPlayerLane
-    {
-        return $this->lane;
-    }
-
     public function getRole(): Role
     {
         return $this->role;
     }
 
-    public function isRadiant(): bool
+    public function getObjectives(): ObjectivesStats
     {
-        return $this->side === Side::RADIANT;
+        return $this->objectives;
     }
 
-    public function isDire(): bool
+    public function getCreeps(): CreepsStats
     {
-        return $this->side === Side::DIRE;
+        return $this->creeps;
     }
 
-    public function getPlayerProName(): ?PlayerName
+    public function getEconomy(): MatchPlayerEconomy
     {
-        return $this->playerProName;
+        return $this->economy;
     }
 
-    public function getPlayerName(): PlayerName
+    public function getWarding(): WardingStats
     {
-        return $this->playerPersonaName;
+        return $this->warding;
+    }
+
+    public function getDamage(): DamageStats
+    {
+        return $this->damage;
+    }
+
+    public function getIdentity(): Identity
+    {
+        return $this->identity;
+    }
+
+    public function getUtility(): UtilityStats
+    {
+        return $this->utility;
     }
 }
