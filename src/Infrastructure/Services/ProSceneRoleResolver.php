@@ -4,7 +4,7 @@ namespace Histel951\Dota2Api\Infrastructure\Services;
 
 use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\LaneEnum;
+use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 
@@ -23,9 +23,9 @@ class ProSceneRoleResolver implements RoleResolverInterface
 
         foreach ($players as $player) {
             match ($player->getLane()->getValue()) {
-                LaneEnum::SAFE => $safeLane[] = $player,
-                LaneEnum::OFFLANE => $offLane[] = $player,
-                LaneEnum::MIDDLE => $midLane[] = $player,
+                Lane::SAFE => $safeLane[] = $player,
+                Lane::OFFLANE => $offLane[] = $player,
+                Lane::MIDDLE => $midLane[] = $player,
             };
         }
 
