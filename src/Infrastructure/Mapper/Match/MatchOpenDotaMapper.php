@@ -10,6 +10,7 @@ use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidHeroIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidKDAException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerIdException;
+use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerNameException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamNameException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidXPMException;
@@ -19,12 +20,13 @@ use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\LaneEnum;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\SideEnum;
+use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
+use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\InvalidDraftOrderException;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
@@ -35,11 +37,18 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
+use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
 
 class MatchOpenDotaMapper extends AbstractMapper
 {
+    public function __construct(
+        private readonly RoleResolverInterface $roleResolver
+    )
+    {
+    }
+
     private const array REQUIRED_FIELDS = [
         'match_id',
         'duration',
@@ -67,6 +76,7 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidTeamIdException
      * @throws InvalidTeamNameException
      * @throws InvalidDraftOrderException
+     * @throws InvalidPlayerNameException
      */
     function toEntity(array $data): MatchDetail
     {
@@ -82,9 +92,7 @@ class MatchOpenDotaMapper extends AbstractMapper
 
             if ($playerEntity->isRadiant()) {
                 $radiantPlayers[] = $playerEntity;
-            }
-
-            if (false === $playerEntity->isRadiant()) {
+            } else {
                 $direPlayers[] = $playerEntity;
             }
         }
@@ -119,6 +127,14 @@ class MatchOpenDotaMapper extends AbstractMapper
             }
         }
 
+        $radiantPlayers = $this->roleResolver->resolve($radiantPlayers);
+        $direPlayers = $this->roleResolver->resolve($direPlayers);
+
+        $players = [
+            ...$radiantPlayers,
+            ...$direPlayers,
+        ];
+
         $radiantTeam = $this->createTeamSide(
             teamId: $optional['radiant_team_id'],
             teamName: $optional['radiant_name'],
@@ -126,7 +142,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             picks: $radiantPicks,
             bans: $radiantBans,
             players: $radiantPlayers,
-            side: SideEnum::RADIANT,
+            side: Side::RADIANT,
         );
 
         $direTeam = $this->createTeamSide(
@@ -136,7 +152,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             picks: $direPicks,
             bans: $direBans,
             players: $direPlayers,
-            side: SideEnum::DIRE,
+            side: Side::DIRE,
         );
 
         $winner = null;
@@ -174,6 +190,7 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidXPMException
      * @throws InvalidGPMException
      * @throws InvalidPlayerIdException
+     * @throws InvalidPlayerNameException
      */
     private function createPlayer(array $playerData): MatchPlayerPerformance
     {
@@ -187,9 +204,11 @@ class MatchOpenDotaMapper extends AbstractMapper
             ),
             gpm: new Gpm($playerData['gold_per_min']),
             xpm: new Xpm($playerData['xp_per_min']),
-            lane: new MatchPlayerLane(LaneEnum::from($playerData['lane'])),
-            role: new Role(RoleEnum::UNKNOWN), // todo: ЗАГЛУШКА!! сделать RoleResolver который будет определять роль игрока в матче на основе общей статистики
-            side: $playerData['isRadiant'] ? SideEnum::RADIANT : SideEnum::DIRE,
+            lane: new MatchPlayerLane(Lane::from($playerData['lane'])),
+            role: new Role(RoleEnum::UNKNOWN),
+            side: $playerData['isRadiant'] ? Side::RADIANT : Side::DIRE,
+            playerProName: new PlayerName($playerData['name']),
+            playerPersonaName: new PlayerName($playerData['personaname']),
         );
     }
 
@@ -202,7 +221,7 @@ class MatchOpenDotaMapper extends AbstractMapper
         return new DraftDecision(
             heroId: new HeroId($data['hero_id']),
             draftOrder: new DraftOrder($data['order']),
-            side: SideEnum::from($data['team']),
+            side: Side::from($data['team']),
             isPick: $data['is_pick'],
         );
     }
@@ -214,19 +233,19 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @param DraftDecision[] $picks
      * @param DraftDecision[] $bans
      * @param MatchPlayerPerformance[] $players
-     * @param SideEnum $side
+     * @param Side $side
      * @return TeamSide
      * @throws InvalidTeamIdException
      * @throws InvalidTeamNameException
      */
     private function createTeamSide(
-        ?int $teamId,
+        ?int    $teamId,
         ?string $teamName,
-        bool $won,
-        array $picks,
-        array $bans,
-        array $players,
-        SideEnum $side,
+        bool    $won,
+        array   $picks,
+        array   $bans,
+        array   $players,
+        Side    $side,
     ): TeamSide
     {
         return new TeamSide(

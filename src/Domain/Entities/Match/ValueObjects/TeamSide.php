@@ -4,7 +4,7 @@ namespace Histel951\Dota2Api\Domain\Entities\Match\ValueObjects;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\SideEnum;
+use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 
 final readonly class TeamSide
 {
@@ -14,15 +14,15 @@ final readonly class TeamSide
      * @param bool $won
      * @param Draft $draft
      * @param MatchPlayers $players
-     * @param SideEnum $side
+     * @param Side $side
      */
     public function __construct(
-        private TeamId $teamId,
-        private TeamName $teamName,
-        private bool $won,
-        private Draft $draft,
+        private TeamId       $teamId,
+        private TeamName     $teamName,
+        private bool         $won,
+        private Draft        $draft,
         private MatchPlayers $players,
-        private SideEnum $side,
+        private Side         $side,
     ) {}
 
     public function getTeamId(): TeamId
@@ -50,18 +50,18 @@ final readonly class TeamSide
         return $this->teamName;
     }
 
-    public function getSide(): SideEnum
+    public function getSide(): Side
     {
         return $this->side;
     }
 
     public function isRadiant(): bool
     {
-        return $this->side === SideEnum::RADIANT;
+        return $this->side === Side::RADIANT;
     }
 
     public function isDire(): bool
     {
-        return $this->side === SideEnum::DIRE;
+        return $this->side === Side::DIRE;
     }
 }
