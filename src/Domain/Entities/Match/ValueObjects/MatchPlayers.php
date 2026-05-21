@@ -23,7 +23,7 @@ final readonly class MatchPlayers
     public function getByRole(RoleEnum $role, bool $isRadiant): MatchPlayerPerformance
     {
         foreach ($this->value as $player) {
-            if ($player->getRole()->getValue() === $role && $player->isRadiant() === $isRadiant) {
+            if ($player->getRole()->getValue() === $role && $player->getIdentity()->isRadiant() === $isRadiant) {
                 return $player;
             }
         }

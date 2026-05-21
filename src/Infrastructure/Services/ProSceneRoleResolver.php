@@ -22,7 +22,7 @@ class ProSceneRoleResolver implements RoleResolverInterface
         $midLane = [];
 
         foreach ($players as $player) {
-            match ($player->getLane()->getValue()) {
+            match ($player->getIdentity()->getLane()->getValue()) {
                 Lane::SAFE => $safeLane[] = $player,
                 Lane::OFFLANE => $offLane[] = $player,
                 Lane::MIDDLE => $midLane[] = $player,
@@ -49,7 +49,7 @@ class ProSceneRoleResolver implements RoleResolverInterface
             usort(
                 $safeLane,
                 fn(MatchPlayerPerformance $a, MatchPlayerPerformance $b)
-                => $b->getGpm()->getValue() <=> $a->getGpm()->getValue()
+                => $b->getEconomy()->getGPM()->getValue() <=> $a->getEconomy()->getGPM()->getValue()
             );
 
             $resolved[] = $safeLane[0]->withRole(
@@ -70,7 +70,7 @@ class ProSceneRoleResolver implements RoleResolverInterface
             usort(
                 $offLane,
                 fn(MatchPlayerPerformance $a, MatchPlayerPerformance $b)
-                => $b->getGpm()->getValue() <=> $a->getGpm()->getValue()
+                => $b->getEconomy()->getGPM()->getValue() <=> $a->getEconomy()->getGPM()->getValue()
             );
 
             $resolved[] = $offLane[0]->withRole(

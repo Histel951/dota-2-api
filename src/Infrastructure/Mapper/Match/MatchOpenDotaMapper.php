@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\Mapper\Match;
 
 use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
+use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidCounterException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidDurationException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidGPMException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidHeroIdException;
@@ -15,28 +16,58 @@ use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamNameException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidXPMException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\GoldSpent;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\GPM;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\NetWorth;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalGold;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalXP;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\InvalidDraftOrderException;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\AncientCreeps;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\BuybackCount;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CourierKills;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CreepsStats;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DamageStats;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Denies;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftDecision;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftOrder;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\HeroDamage;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\HeroHealing;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Identity;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\LaneCreeps;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\LastHits;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerEconomy;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\NeutralCreeps;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObjectivesStats;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversDestroyed;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversPlaced;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RoshanKills;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RunePickups;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryDestroyed;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryPlaced;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Stuns;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamfightParticipation;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerDamage;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
@@ -77,20 +108,19 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidTeamNameException
      * @throws InvalidDraftOrderException
      * @throws InvalidPlayerNameException
+     * @throws InvalidCounterException
      */
     function toEntity(array $data): MatchDetail
     {
         $this->validate($data, self::REQUIRED_FIELDS);
         $optional = $this->extractOptionalFields($data, self::OPTIONAL_FIELDS);
 
-        $players = [];
         $radiantPlayers = [];
         $direPlayers = [];
         foreach ($data['players'] as $player) {
             $playerEntity = $this->createPlayer($player);
-            $players[] = $playerEntity;
 
-            if ($playerEntity->isRadiant()) {
+            if ($playerEntity->getIdentity()->isRadiant()) {
                 $radiantPlayers[] = $playerEntity;
             } else {
                 $direPlayers[] = $playerEntity;
@@ -184,6 +214,7 @@ class MatchOpenDotaMapper extends AbstractMapper
         );
     }
 
+    // todo: на будущее нужно придумать как получать: убийства торментора, лотусы, захваченные смотрители, безумруды
     /**
      * @throws InvalidKDAException
      * @throws InvalidHeroIdException
@@ -191,24 +222,63 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidGPMException
      * @throws InvalidPlayerIdException
      * @throws InvalidPlayerNameException
+     * @throws InvalidCounterException
      */
     private function createPlayer(array $playerData): MatchPlayerPerformance
     {
         return new MatchPlayerPerformance(
-            playerId: new PlayerId($playerData['account_id']),
-            heroId: new HeroId($playerData['hero_id']),
-            kda: new Kda(
+            identity: new Identity(
+                playerId: new PlayerId($playerData['account_id']),
+                heroId: new HeroId($playerData['hero_id']),
+                side: $playerData['isRadiant'] ? Side::RADIANT : Side::DIRE,
+                lane: new MatchPlayerLane(Lane::from($playerData['lane'])),
+                playerProName: new PlayerName($playerData['name']),
+                playerPersonaName: new PlayerName($playerData['personaname']),
+            ),
+            kda: new KDA(
                 kills: $playerData['kills'],
                 deaths: $playerData['deaths'],
                 assists: $playerData['assists']
             ),
-            gpm: new Gpm($playerData['gold_per_min']),
-            xpm: new Xpm($playerData['xp_per_min']),
-            lane: new MatchPlayerLane(Lane::from($playerData['lane'])),
             role: new Role(RoleEnum::UNKNOWN),
-            side: $playerData['isRadiant'] ? Side::RADIANT : Side::DIRE,
-            playerProName: new PlayerName($playerData['name']),
-            playerPersonaName: new PlayerName($playerData['personaname']),
+            objectives: new ObjectivesStats(
+                roshanKills: new RoshanKills($playerData['roshan_kills']),
+                towerKills: new TowerKills($playerData['tower_kills']),
+                runePickups: new RunePickups($playerData['rune_pickups']),
+            ),
+            creeps: new CreepsStats(
+                lastHits: new LastHits($playerData['last_hits']),
+                laneCreeps: new LaneCreeps($playerData['lane_kills']),
+                denies: new Denies($playerData['denies']),
+                neutralCreeps: new NeutralCreeps($playerData['neutral_kills']),
+                ancientCreeps: new AncientCreeps($playerData['ancient_kills']),
+            ),
+            economy: new MatchPlayerEconomy(
+                netWorth: new NetWorth($playerData['net_worth']),
+                totalGold: new TotalGold($playerData['total_gold']),
+                totalXP: new TotalXP($playerData['total_xp']),
+                goldSpent: new GoldSpent($playerData['gold_spent']),
+                XPM: new XPM($playerData['xp_per_min']),
+                GPM: new GPM($playerData['gold_per_min']),
+            ),
+            warding: new WardingStats(
+                observersPlaced: new ObserversPlaced($playerData['obs_placed']),
+                sentryPlaced: new SentryPlaced($playerData['sen_placed']),
+                observersDestroyed: new ObserversDestroyed($playerData['observer_kills']),
+                sentryDestroyed: new SentryDestroyed($playerData['sentry_kills']),
+            ),
+            damage: new DamageStats(
+                heroDamage: new HeroDamage($playerData['hero_damage']),
+                towerDamage: new TowerDamage($playerData['tower_damage']),
+                heroHealing: new HeroHealing($playerData['hero_healing']),
+            ),
+            utility: new UtilityStats(
+                buybackCount: new BuybackCount($playerData['buyback_count']),
+                firstBloodClaimed: (bool)$playerData['firstblood_claimed'],
+                courierKills: new CourierKills($playerData['courier_kills']),
+                stuns: new Stuns($playerData['stuns']),
+                teamfightParticipation: new TeamfightParticipation($playerData['teamfight_participation']),
+            ),
         );
     }
 
