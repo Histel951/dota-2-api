@@ -1,4 +1,4 @@
 dota2_api:
-  base_opendota_url: https://api.opendota.com/api
-  base_stratz_url: https://api.stratz.com/
+  api_key: '%env(OPENDOTA_API_KEY)%'
   timeout: 60
+  source: opendota
