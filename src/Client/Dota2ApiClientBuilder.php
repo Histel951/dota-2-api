@@ -9,18 +9,15 @@ use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
 use Histel951\Dota2Api\Infrastructure\Http\OpenDotaHttpClient;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaProviderFactory;
-use Symfony\Component\HttpClient\HttpClient;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 final class Dota2ApiClientBuilder
 {
-    private ConfigurationHttpClient $cfg;
-
-    public function withConfiguration(ConfigurationHttpClient $cfg): self
+    public function __construct(
+        private readonly ConfigurationHttpClient $cfg,
+        private readonly HttpClientInterface $client,
+    )
     {
-        $clone = clone $this;
-        $clone->cfg = $cfg;
-
-        return $clone;
     }
 
     /**
@@ -29,7 +26,7 @@ final class Dota2ApiClientBuilder
     public function build(): Dota2ApiClient
     {
         $httpClient = new OpenDotaHttpClient(
-            HttpClient::create(),
+            $this->client,
             $this->cfg,
         );
 
