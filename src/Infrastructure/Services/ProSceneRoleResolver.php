@@ -2,7 +2,7 @@
 
 namespace Histel951\Dota2Api\Infrastructure\Services;
 
-use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
+use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
@@ -36,7 +36,7 @@ class ProSceneRoleResolver implements RoleResolverInterface
          */
         foreach ($midLane as $player) {
             $resolved[] = $player->withRole(
-                new Role(RoleEnum::MIDDLE)
+                new Role(PlayerRole::MIDDLE)
             );
         }
 
@@ -53,11 +53,11 @@ class ProSceneRoleResolver implements RoleResolverInterface
             );
 
             $resolved[] = $safeLane[0]->withRole(
-                new Role(RoleEnum::CARRY)
+                new Role(PlayerRole::CARRY)
             );
 
             $resolved[] = $safeLane[1]->withRole(
-                new Role(RoleEnum::HARD_SUPPORT)
+                new Role(PlayerRole::HARD_SUPPORT)
             );
         }
 
@@ -74,11 +74,11 @@ class ProSceneRoleResolver implements RoleResolverInterface
             );
 
             $resolved[] = $offLane[0]->withRole(
-                new Role(RoleEnum::OFFLANE)
+                new Role(PlayerRole::OFFLANE)
             );
 
             $resolved[] = $offLane[1]->withRole(
-                new Role(RoleEnum::SUPPORT)
+                new Role(PlayerRole::SUPPORT)
             );
         }
 

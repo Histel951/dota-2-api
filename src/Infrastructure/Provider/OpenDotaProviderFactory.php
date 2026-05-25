@@ -12,6 +12,7 @@ use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamPlayerOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
+use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\Services\ProSceneRoleResolver;
 
 final class OpenDotaProviderFactory implements ProviderFactory
@@ -26,7 +27,8 @@ final class OpenDotaProviderFactory implements ProviderFactory
     {
         return new OpenDotaMatchProvider(
             gateway: $this->gateway,
-            mapper: new MatchOpenDotaMapper(new ProSceneRoleResolver())
+            mapper: new MatchOpenDotaMapper(new ProSceneRoleResolver()),
+            extractor: new MatchExtractor(),
         );
     }
 

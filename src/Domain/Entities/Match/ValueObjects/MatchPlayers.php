@@ -3,7 +3,8 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Domain\Entities\Match\ValueObjects;
 
-use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
+use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\MatchPlayersException;
 
 final readonly class MatchPlayers
@@ -20,10 +21,10 @@ final readonly class MatchPlayers
     /**
      * @throws MatchPlayersException
      */
-    public function getByRole(RoleEnum $role, bool $isRadiant): MatchPlayerPerformance
+    public function getByRole(PlayerRole $role, Side $side): MatchPlayerPerformance
     {
         foreach ($this->value as $player) {
-            if ($player->getRole()->getValue() === $role && $player->getIdentity()->isRadiant() === $isRadiant) {
+            if ($player->getRole()->getValue() === $role && $player->getIdentity()->getSide() === $side) {
                 return $player;
             }
         }

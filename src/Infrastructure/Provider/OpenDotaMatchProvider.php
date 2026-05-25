@@ -11,6 +11,7 @@ use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use Histel951\Dota2Api\Infrastructure\Provider\Results\MatchResult;
 use SplObjectStorage;
 use SplQueue;
@@ -21,7 +22,8 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
 {
     public function __construct(
         private readonly ApiGatewayInterface $gateway,
-        private readonly MatchOpenDotaMapper $mapper
+        private readonly MatchOpenDotaMapper $mapper,
+        private readonly ExtractorInterface $extractor,
     )
     {
     }
@@ -33,10 +35,15 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
      */
     public function getMatch(MatchId $id): MatchResult
     {
-        $result = $this->gateway->get('matches/' . $id->getValue());
+        $response = $this->gateway->request(
+            HttpMethod::GET,
+            "matches/$id"
+        );
 
         try {
-            $entity = $this->mapper->toEntity($result);
+            $json = $response->getContent();
+            $extracted = $this->extractor->extract($json);
+            $entity = $this->mapper->toEntity($extracted);
 
             return new MatchResult($id, $entity, null);
         } catch (Throwable $e) {
@@ -86,8 +93,9 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
                 $id = $responseMap[$response];
 
                 try {
-                    $data = $this->gateway->parseResponse($response);
-                    $entity = $this->mapper->toEntity($data);
+                    $json = $response->getContent();
+                    $extracted = $this->extractor->extract($json);
+                    $entity = $this->mapper->toEntity($extracted);
 
                     yield new MatchResult(new MatchId($id), $entity, null);
                 } catch (Throwable $e) {

@@ -31,6 +31,11 @@ final readonly class Identity
         return $this->side === Side::DIRE;
     }
 
+    public function getSide(): Side
+    {
+        return $this->side;
+    }
+
     public function getPlayerProName(): ?PlayerName
     {
         return $this->playerProName;
