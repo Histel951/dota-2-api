@@ -14,7 +14,16 @@ $client = (new Dota2ApiClientBuilder(new ConfigurationHttpClient(
     timeout: 600
 ), HttpClient::create()))->build();
 
-
 $matchesProvider = $client->matches();
-$detail = $matchesProvider->getMatch(new MatchId(8787299097));
-var_dump($detail->getPlayers()->getValue());
+$detail = $matchesProvider->getMatches([
+    new MatchId(8787299097),
+    new MatchId(8824218541),
+    new MatchId(8824123966),
+    new MatchId(8823904596),
+    new MatchId(8823789680),
+    new MatchId(8822412074),
+]);
+
+foreach ($detail as $match) {
+    var_dump($match->getMatchId()->getValue());
+}
