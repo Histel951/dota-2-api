@@ -29,6 +29,4 @@ interface ApiGatewayInterface
      * @throws ApiGatewayException
      */
     public function get(string $endpoint): array;
-
-    public function parseResponse(ResponseInterface $response): array;
 }

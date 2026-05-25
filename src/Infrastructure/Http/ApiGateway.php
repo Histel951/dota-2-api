@@ -62,7 +62,7 @@ class ApiGateway implements ApiGatewayInterface
     /**
      * @throws ApiGatewayException
      */
-    public function parseResponse(ResponseInterface $response): array
+    private function parseResponse(ResponseInterface $response): array
     {
         try {
             return $response->toArray();
