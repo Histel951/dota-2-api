@@ -3,17 +3,17 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Domain\Common\ValueObjects;
 
-use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
+use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 
 final readonly class Role
 {
     public function __construct(
-        private RoleEnum $value
+        private PlayerRole $value
     )
     {
     }
 
-    public function getValue(): RoleEnum
+    public function getValue(): PlayerRole
     {
         return $this->value;
     }

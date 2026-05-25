@@ -3,7 +3,7 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Infrastructure\Mapper\Match;
 
-use Histel951\Dota2Api\Domain\Common\Enums\RoleEnum;
+use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidCounterException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidDurationException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidGPMException;
@@ -240,7 +240,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 deaths: $playerData['deaths'],
                 assists: $playerData['assists']
             ),
-            role: new Role(RoleEnum::UNKNOWN),
+            role: new Role(PlayerRole::UNKNOWN),
             objectives: new ObjectivesStats(
                 roshanKills: new RoshanKills($playerData['roshan_kills']),
                 towerKills: new TowerKills($playerData['tower_kills']),
