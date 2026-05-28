@@ -12,6 +12,7 @@ class MatchExtractor implements ExtractorInterface
         'match_id',
         'duration',
         'radiant_win',
+        'start_time',
     ];
 
     private const array OPTIONAL_FIELDS = [
