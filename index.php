@@ -33,11 +33,7 @@ foreach ($detail as $match) {
         echo $match->getError()->getMessage();
     } else {
         var_dump($match->getMatchDetail()
-            ->getPlayers()
-            ->getByRole(PlayerRole::MIDDLE, Side::RADIANT)
-            ->getIdentity()
-            ->getPlayerProName()
-            ->getValue()
+            ->getStartTime()->getValue()->getTimestamp()
         );
     }
 }

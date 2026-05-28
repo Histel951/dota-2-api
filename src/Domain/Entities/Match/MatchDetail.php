@@ -2,11 +2,13 @@
 
 namespace Histel951\Dota2Api\Domain\Entities\Match;
 
+use DateTimeImmutable;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchStartTime;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
 
 final class MatchDetail
@@ -19,6 +21,7 @@ final class MatchDetail
         private readonly TeamSide $dire,
         private readonly Draft $draft,
         private readonly MatchPlayers $players,
+        private readonly MatchStartTime $startTime,
     ) {}
 
     public function getId(): MatchId
@@ -54,5 +57,10 @@ final class MatchDetail
     public function getPlayers(): MatchPlayers
     {
         return $this->players;
+    }
+
+    public function getStartTime(): MatchStartTime
+    {
+        return $this->startTime;
     }
 }

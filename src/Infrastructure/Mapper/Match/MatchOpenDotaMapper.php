@@ -53,6 +53,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchStartTime;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\NeutralCreeps;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObjectivesStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversDestroyed;
@@ -211,6 +212,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 bans: $allBans,
             ),
             players: new MatchPlayers($players),
+            startTime: MatchStartTime::fromTimestamp($data['start_time']),
         );
     }
 
