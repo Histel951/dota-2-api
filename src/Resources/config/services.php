@@ -9,6 +9,7 @@ use Histel951\Dota2Api\Infrastructure\Http\OpenDotaHttpClient;
 use Histel951\Dota2Api\Infrastructure\Services\ProSceneRoleResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
+use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
@@ -28,7 +29,7 @@ return static function (ContainerConfigurator $configurator): void {
     );
 
     $services->set(HttpClientInterface::class)
-        ->factory([HttpClientInterface::class, 'create']);
+        ->factory([HttpClient::class, 'create']);
 
     $services->set(ConfigurationHttpClient::class)
         ->args([
