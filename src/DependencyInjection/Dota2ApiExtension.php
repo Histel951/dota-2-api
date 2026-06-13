@@ -5,6 +5,7 @@ namespace Histel951\Dota2Api\DependencyInjection;
 
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
+use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
@@ -17,6 +18,7 @@ use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
+use Histel951\Dota2Api\Infrastructure\Services\ProSceneRoleResolver;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -68,6 +70,11 @@ final class Dota2ApiExtension extends Extension
         $container->autowire(
             ExtractorInterface::class,
             MatchExtractor::class,
+        )->setPublic(true);
+
+        $container->autowire(
+            RoleResolverInterface::class,
+            ProSceneRoleResolver::class
         )->setPublic(true);
 
         if (ApiSource::OPENDOTA->value === $config['source']) {
