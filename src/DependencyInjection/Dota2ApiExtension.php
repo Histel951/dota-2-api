@@ -5,6 +5,8 @@ namespace Histel951\Dota2Api\DependencyInjection;
 
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
+use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
@@ -50,6 +52,11 @@ final class Dota2ApiExtension extends Extension
         );
 
         $loader->load('services.php');
+
+        $container->autowire(
+            ApiGatewayInterface::class,
+            ApiGateway::class,
+        );
 
         if (ApiSource::OPENDOTA->value === $config['source']) {
             $container->autowire(
