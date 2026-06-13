@@ -3,7 +3,11 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
+use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
+use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
+use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
+use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -46,5 +50,17 @@ final class Dota2ApiExtension extends Extension
         );
 
         $loader->load('services.php');
+
+        if (ApiSource::OPENDOTA->value === $config['source']) {
+            $container->autowire(
+                MatchesProviderInterface::class,
+                OpenDotaMatchProvider::class,
+            )->addTag('dota2_api.provider');
+
+            $container->autowire(
+                TeamProviderInterface::class,
+                OpenDotaTeamProvider::class,
+            )->addTag('dota2_api.provider');
+        }
     }
 }
