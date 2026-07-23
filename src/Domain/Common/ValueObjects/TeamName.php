@@ -30,10 +30,6 @@ final readonly class TeamName
             throw new InvalidTeamNameException('Team name cannot contain multiple spaces in a row');
         }
 
-        if ($normalized !== $value) {
-            throw new InvalidTeamNameException('Team name cannot have leading or trailing spaces');
-        }
-
         $this->value = $normalized;
     }
 
