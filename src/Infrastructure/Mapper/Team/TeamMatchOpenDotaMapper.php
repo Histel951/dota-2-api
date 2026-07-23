@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\Mapper\Team;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Cluster;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
@@ -77,7 +78,7 @@ class TeamMatchOpenDotaMapper extends AbstractMapper
             radiantWon: $data['radiant_win'],
             radiantScore: $data['radiant_score'],
             direScore: $data['dire_score'],
-            duration: $data['duration']
+            duration: Duration::fromSeconds($data['duration'])
         );
     }
 }
