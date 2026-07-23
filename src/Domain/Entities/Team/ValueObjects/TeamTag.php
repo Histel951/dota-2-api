@@ -22,10 +22,6 @@ final readonly class TeamTag
             throw new InvalidTeamTagException('Team tag cannot be empty');
         }
 
-        if ($normalized !== $value) {
-            throw new InvalidTeamTagException('Team name cannot have leading or trailing spaces');
-        }
-
         $this->value = $normalized;
     }
 
