@@ -30,7 +30,7 @@ final readonly class Region
         }
     }
 
-    public function fromId(int $id): self
+    public static function fromId(int $id): self
     {
         $regionType = RegionType::tryFrom($id);
 
