@@ -2,9 +2,9 @@
 
 namespace Histel951\Dota2Api\Infrastructure\Services;
 
+use Histel951\Dota2Api\Domain\Common\Enums\RegionType;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Region;
 use Histel951\Dota2Api\Domain\Services\RegionResolverInterface;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\RegionType;
 
 final readonly class RegionResolver implements RegionResolverInterface
 {
