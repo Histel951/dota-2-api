@@ -30,6 +30,21 @@ final readonly class Region
         }
     }
 
+    public function fromId(int $id): self
+    {
+        $regionType = RegionType::tryFrom($id);
+
+        if (null === $regionType) {
+            throw InvalidRegionException::invalidRegionId($id);
+        }
+
+        return new self(
+            id: $regionType->value,
+            name: $regionType->label(),
+            code: $regionType->code()
+        );
+    }
+
     public function getId(): int
     {
         return $this->id;
