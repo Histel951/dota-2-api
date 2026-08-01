@@ -69,6 +69,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerDamage;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
+use Histel951\Dota2Api\Domain\Services\RegionResolverInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
@@ -76,7 +77,8 @@ use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
 class MatchOpenDotaMapper extends AbstractMapper
 {
     public function __construct(
-        private readonly RoleResolverInterface $roleResolver
+        private readonly RoleResolverInterface $roleResolver,
+        private readonly RegionResolverInterface $regionResolver,
     )
     {
     }
@@ -94,6 +96,7 @@ class MatchOpenDotaMapper extends AbstractMapper
         'dire_team_id',
         'dire_name',
         'picks_bans',
+        'region',
     ];
 
     /**
@@ -201,6 +204,8 @@ class MatchOpenDotaMapper extends AbstractMapper
             loser: $loser,
         );
 
+        $region = $this->regionResolver->resolve($optional['region']);
+
         return new MatchDetail(
             id: new MatchId($data['match_id']),
             duration: Duration::fromSeconds($data['duration']),
@@ -213,6 +218,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             ),
             players: new MatchPlayers($players),
             startTime: MatchStartTime::fromTimestamp($data['start_time']),
+            region: $region,
         );
     }
 
