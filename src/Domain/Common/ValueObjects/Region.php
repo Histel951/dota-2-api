@@ -30,12 +30,12 @@ final readonly class Region
         }
     }
 
-    public static function fromId(int $id): self
+    public static function fromId(int $id): ?self
     {
         $regionType = RegionType::tryFrom($id);
 
         if (null === $regionType) {
-            throw InvalidRegionException::invalidRegionId($id);
+            return null;
         }
 
         return new self(
