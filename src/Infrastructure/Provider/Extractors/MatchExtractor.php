@@ -21,6 +21,7 @@ class MatchExtractor implements ExtractorInterface
         'radiant_name',
         'dire_team_id',
         'dire_name',
+        'region',
     ];
 
     private const array PLAYER_FIELDS = [
