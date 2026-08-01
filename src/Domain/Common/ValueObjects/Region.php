@@ -5,7 +5,7 @@ namespace Histel951\Dota2Api\Domain\Common\ValueObjects;
 use Histel951\Dota2Api\Domain\Common\Enums\RegionType;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidRegionException;
 
-final readonly class Region
+final class Region
 {
     public function __construct(
         private int $id,
