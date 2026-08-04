@@ -166,7 +166,7 @@ class MatchOpenDotaMapper extends AbstractMapper
         }
 
         $radiantPlayers = $this->roleResolver->resolve($radiantPlayers);
-        $direPlayers = $this->roleResolver->resolve($direPlayers);
+        $direPlayers = $this->roleResolver->resolve($direPlayers, false);
 
         $players = [
             ...$radiantPlayers,
