@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
+use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
@@ -18,7 +19,6 @@ use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
-use Histel951\Dota2Api\Infrastructure\Services\ProSceneRoleResolver;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
