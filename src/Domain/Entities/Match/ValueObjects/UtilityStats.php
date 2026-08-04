@@ -11,6 +11,7 @@ final readonly class UtilityStats
         private CourierKills           $courierKills,
         private Stuns                  $stuns,
         private TeamfightParticipation $teamfightParticipation,
+        private SmokeUses              $smokeUses,
     )
     {
     }
@@ -38,5 +39,10 @@ final readonly class UtilityStats
     public function getTeamfightParticipation(): TeamfightParticipation
     {
         return $this->teamfightParticipation;
+    }
+
+    public function getSmokeUses(): SmokeUses
+    {
+        return $this->smokeUses;
     }
 }

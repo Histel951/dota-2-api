@@ -10,6 +10,7 @@ final readonly class WardingStats
         private SentryPlaced $sentryPlaced,
         private ObserversDestroyed $observersDestroyed,
         private SentryDestroyed $sentryDestroyed,
+        private ObserverTakeovers $observerTakeovers,
     )
     {
     }
@@ -32,5 +33,10 @@ final readonly class WardingStats
     public function getSentryDestroyed(): SentryDestroyed
     {
         return $this->sentryDestroyed;
+    }
+
+    public function getObserverTakeovers(): ObserverTakeovers
+    {
+        return $this->observerTakeovers;
     }
 }

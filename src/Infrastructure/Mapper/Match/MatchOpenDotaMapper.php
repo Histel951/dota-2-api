@@ -59,13 +59,16 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\NeutralCreeps;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObjectivesStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversDestroyed;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversPlaced;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserverTakeovers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RoshanKills;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SmokeUses;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RunePickups;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryDestroyed;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryPlaced;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Stuns;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamfightParticipation;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TormentorKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerDamage;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
@@ -123,7 +126,7 @@ class MatchOpenDotaMapper extends AbstractMapper
         $radiantPlayers = [];
         $direPlayers = [];
         foreach ($data['players'] as $player) {
-            $playerEntity = $this->createPlayer($player);
+            $playerEntity = $this->createPlayer($player, $data['objectives'] ?? []);
 
             if ($playerEntity->getIdentity()->isRadiant()) {
                 $radiantPlayers[] = $playerEntity;
@@ -223,7 +226,6 @@ class MatchOpenDotaMapper extends AbstractMapper
         );
     }
 
-    // todo: на будущее нужно придумать как получать: убийства торментора, лотусы, захваченные смотрители, безумруды
     /**
      * @throws InvalidKDAException
      * @throws InvalidHeroIdException
@@ -233,7 +235,7 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidPlayerNameException
      * @throws InvalidCounterException
      */
-    private function createPlayer(array $playerData): MatchPlayerPerformance
+    private function createPlayer(array $playerData, array $objectives): MatchPlayerPerformance
     {
         return new MatchPlayerPerformance(
             identity: new Identity(
@@ -254,6 +256,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 roshanKills: new RoshanKills($playerData['roshan_kills']),
                 towerKills: new TowerKills($playerData['tower_kills']),
                 runePickups: new RunePickups($playerData['rune_pickups']),
+                tormentorKills: new TormentorKills($this->calculateTormentorKills($objectives, $playerData['player_slot'] ?? 0)),
             ),
             creeps: new CreepsStats(
                 lastHits: new LastHits($playerData['last_hits']),
@@ -276,6 +279,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 sentryPlaced: new SentryPlaced($playerData['sen_placed']),
                 observersDestroyed: new ObserversDestroyed($playerData['observer_kills']),
                 sentryDestroyed: new SentryDestroyed($playerData['sentry_kills']),
+                observerTakeovers: new ObserverTakeovers($playerData['ability_uses']['ability_capture'] ?? 0),
             ),
             damage: new DamageStats(
                 heroDamage: new HeroDamage($playerData['hero_damage']),
@@ -288,6 +292,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 courierKills: new CourierKills($playerData['courier_kills']),
                 stuns: new Stuns($playerData['stuns']),
                 teamfightParticipation: new TeamfightParticipation($playerData['teamfight_participation']),
+                smokeUses: new SmokeUses($playerData['item_usage']['smoke_of_deceit'] ?? 0),
             ),
         );
     }
@@ -339,6 +344,29 @@ class MatchOpenDotaMapper extends AbstractMapper
             players: new MatchPlayers($players),
             side: $side,
         );
+    }
+
+    /**
+     * Подсчитывает количество убийств торментора конкретным игроком
+     *
+     * @param array $objectives Массив objectives из данных матча
+     * @param int $playerSlot Player slot игрока
+     * @return int Количество убийств торментора
+     */
+    private function calculateTormentorKills(array $objectives, int $playerSlot): int
+    {
+        $count = 0;
+        foreach ($objectives as $objective) {
+            if (
+                isset($objective['type']) &&
+                $objective['type'] === 'CHAT_MESSAGE_MINIBOSS_KILL' &&
+                isset($objective['player_slot']) &&
+                $objective['player_slot'] === $playerSlot
+            ) {
+                $count++;
+            }
+        }
+        return $count;
     }
 
     /**
