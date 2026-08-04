@@ -14,6 +14,8 @@ use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 
 final class ProSceneRoleResolver implements RoleResolverInterface
 {
+    private const int TEAM_SIZE = 5;
+
     /**
      * @param MatchPlayerPerformance[] $players
      * @return MatchPlayerPerformance[]
@@ -21,6 +23,18 @@ final class ProSceneRoleResolver implements RoleResolverInterface
      */
     public function resolve(array $players, bool $isRadiant = true): array
     {
+        $playerCount = count($players);
+
+        if ($playerCount !== self::TEAM_SIZE) {
+            throw new DomainException(
+                sprintf(
+                    'Expected exactly %d players, got %d.',
+                    self::TEAM_SIZE,
+                    $playerCount
+                )
+            );
+        }
+
         $lanes = [
             Lane::SAFE->value => [],
             Lane::MIDDLE->value => [],
@@ -61,15 +75,41 @@ final class ProSceneRoleResolver implements RoleResolverInterface
         MatchPlayerLane $playerLane,
         bool $isRadiant
     ): Lane {
+        $lane = $playerLane->getValue();
+
         if ($isRadiant) {
-            return $playerLane->getValue();
+            return $lane;
         }
 
-        return match ($playerLane->getValue()) {
+        return match ($lane) {
             Lane::SAFE => Lane::OFFLANE,
             Lane::OFFLANE => Lane::SAFE,
-            default => $playerLane->getValue(),
+            default => $lane,
         };
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $players
+     *
+     * @throws DomainException
+     */
+    private function assertLaneCount(
+        Lane $lane,
+        array $players,
+        int $expected
+    ): void {
+        $actual = count($players);
+
+        if ($actual !== $expected) {
+            throw new DomainException(
+                sprintf(
+                    'Expected exactly %d player(s) on %s lane, got %d.',
+                    $expected,
+                    strtolower($lane->name),
+                    $actual,
+                )
+            );
+        }
     }
 
     /**
@@ -79,32 +119,23 @@ final class ProSceneRoleResolver implements RoleResolverInterface
      */
     private function assertLaneComposition(array $lanes): void
     {
-        if (count($lanes[Lane::MIDDLE->value]) !== 1) {
-            throw new DomainException(
-                sprintf(
-                    'Expected exactly 1 mid player, got %d.',
-                    count($lanes[Lane::MIDDLE->value])
-                )
-            );
-        }
+        $this->assertLaneCount(
+            Lane::MIDDLE,
+            $lanes[Lane::MIDDLE->value],
+            1
+        );
 
-        if (count($lanes[Lane::SAFE->value]) !== 2) {
-            throw new DomainException(
-                sprintf(
-                    'Expected exactly 2 safe lane players, got %d.',
-                    count($lanes[Lane::SAFE->value])
-                )
-            );
-        }
+        $this->assertLaneCount(
+            Lane::SAFE,
+            $lanes[Lane::SAFE->value],
+            2
+        );
 
-        if (count($lanes[Lane::OFFLANE->value]) !== 2) {
-            throw new DomainException(
-                sprintf(
-                    'Expected exactly 2 off lane players, got %d.',
-                    count($lanes[Lane::OFFLANE->value])
-                )
-            );
-        }
+        $this->assertLaneCount(
+            Lane::OFFLANE,
+            $lanes[Lane::OFFLANE->value],
+            2
+        );
     }
 
     /**
