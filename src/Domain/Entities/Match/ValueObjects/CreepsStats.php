@@ -10,6 +10,7 @@ final readonly class CreepsStats
         private Denies $denies,
         private NeutralCreeps $neutralCreeps,
         private AncientCreeps $ancientCreeps,
+        private CampsStacked $campsStacked,
     )
     {
     }
@@ -37,5 +38,10 @@ final readonly class CreepsStats
     public function getAncientCreeps(): AncientCreeps
     {
         return $this->ancientCreeps;
+    }
+
+    public function getCampsStacked(): CampsStacked
+    {
+        return $this->campsStacked;
     }
 }

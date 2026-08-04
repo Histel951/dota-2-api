@@ -59,7 +59,8 @@ class MatchExtractor implements ExtractorInterface
         'firstblood_claimed',
         'courier_kills',
         'stuns',
-        'teamfight_participation'
+        'teamfight_participation',
+        'camps_stacked',
     ];
 
     /**
