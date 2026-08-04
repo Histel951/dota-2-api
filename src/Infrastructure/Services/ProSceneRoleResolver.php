@@ -12,17 +12,29 @@ class ProSceneRoleResolver implements RoleResolverInterface
 {
 
     /**
-     * @param MatchPlayerPerformance[] $players
+     * @param array $players
+     * @param bool $isRadiant
      * @return MatchPlayerPerformance[]
      */
-    public function resolve(array $players): array
+    public function resolve(array $players, bool $isRadiant = true): array
     {
         $safeLane = [];
         $offLane = [];
         $midLane = [];
 
         foreach ($players as $player) {
-            match ($player->getIdentity()->getLane()->getValue()) {
+            $lane = $player->getIdentity()->getLane()->getValue();
+
+            // нормализация линий, если идёт определение роли для dire команды
+            if (!$isRadiant) {
+                $lane = match ($lane) {
+                    Lane::SAFE => Lane::OFFLANE,
+                    Lane::OFFLANE => Lane::SAFE,
+                    default => $lane,
+                };
+            }
+
+            match ($lane) {
                 Lane::SAFE => $safeLane[] = $player,
                 Lane::OFFLANE => $offLane[] = $player,
                 Lane::MIDDLE => $midLane[] = $player,
