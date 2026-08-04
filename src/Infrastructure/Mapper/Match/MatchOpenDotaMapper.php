@@ -36,6 +36,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\InvalidDraftOrderExcepti
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\AncientCreeps;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\BuybackCount;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CampsStacked;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CourierKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CreepsStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DamageStats;
@@ -260,6 +261,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 denies: new Denies($playerData['denies']),
                 neutralCreeps: new NeutralCreeps($playerData['neutral_kills']),
                 ancientCreeps: new AncientCreeps($playerData['ancient_kills']),
+                campsStacked: new CampsStacked($playerData['camps_stacked']),
             ),
             economy: new MatchPlayerEconomy(
                 netWorth: new NetWorth($playerData['net_worth']),
