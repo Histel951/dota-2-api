@@ -20,10 +20,6 @@ final readonly class PlayerName
             throw new InvalidPlayerNameException('Player pro name cannot be empty');
         }
 
-        if (strlen($normalized) < 2) {
-            throw new InvalidPlayerNameException('Player pro name must be at least 2 characters');
-        }
-
         if (strlen($normalized) > 50) {
             throw new InvalidPlayerNameException('Player pro name cannot exceed 50 characters');
         }

@@ -6,11 +6,11 @@ namespace Histel951\Dota2Api\Domain\Entities\Match\ValueObjects;
 final readonly class WardingStats
 {
     public function __construct(
-        private ObserversPlaced $observersPlaced,
-        private SentryPlaced $sentryPlaced,
+        private ObserversPlaced    $observersPlaced,
+        private SentryPlaced       $sentryPlaced,
         private ObserversDestroyed $observersDestroyed,
-        private SentryDestroyed $sentryDestroyed,
-        private ObserverTakeovers $observerTakeovers,
+        private SentryDestroyed    $sentryDestroyed,
+        private Watchers           $observerTakeovers,
     )
     {
     }
@@ -35,7 +35,7 @@ final readonly class WardingStats
         return $this->sentryDestroyed;
     }
 
-    public function getObserverTakeovers(): ObserverTakeovers
+    public function getObserverTakeovers(): Watchers
     {
         return $this->observerTakeovers;
     }

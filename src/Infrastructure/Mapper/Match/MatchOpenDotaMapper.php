@@ -60,7 +60,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\NeutralCreeps;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObjectivesStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversDestroyed;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversPlaced;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserverTakeovers;
+use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Watchers;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RoshanKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SmokeUses;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RunePickups;
@@ -276,7 +276,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 sentryPlaced: new SentryPlaced($playerData['sen_placed']),
                 observersDestroyed: new ObserversDestroyed($playerData['observer_kills']),
                 sentryDestroyed: new SentryDestroyed($playerData['sentry_kills']),
-                observerTakeovers: new ObserverTakeovers($playerData['ability_uses']['ability_capture'] ?? 0),
+                observerTakeovers: new Watchers($playerData['ability_uses']['ability_lamp_use'] ?? 0),
             ),
             damage: new DamageStats(
                 heroDamage: new HeroDamage($playerData['hero_damage']),
