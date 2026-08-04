@@ -3,14 +3,11 @@ declare(strict_types=1);
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
-use Histel951\Dota2Api\Domain\Services\RegionResolverInterface;
+use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\OpenDotaHttpClient;
-use Histel951\Dota2Api\Infrastructure\Services\ProSceneRoleResolver;
-use Histel951\Dota2Api\Infrastructure\Services\RegionResolver;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
-
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
@@ -28,11 +25,6 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(
         RoleResolverInterface::class,
         ProSceneRoleResolver::class
-    );
-
-    $services->set(
-        RegionResolverInterface::class,
-        RegionResolver::class
     );
 
     $services->set(HttpClientInterface::class)
