@@ -1,97 +1,125 @@
 <?php
-declare(strict_types = 1);
+
+declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Entities\Match\Services;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 
-class ProSceneRoleResolver implements RoleResolverInterface
+final class ProSceneRoleResolver implements RoleResolverInterface
 {
     /**
      * @param MatchPlayerPerformance[] $players
-     * @param bool $isRadiant
      * @return MatchPlayerPerformance[]
+     * @throws DomainException
      */
     public function resolve(array $players, bool $isRadiant = true): array
     {
-        $resolved = [];
-        $safeLane = [];
-        $offLane = [];
-        /** @var MatchPlayerPerformance|null $midLane */
-        $midLane = null;
+        $lanes = [
+            Lane::SAFE->value => [],
+            Lane::MIDDLE->value => [],
+            Lane::OFFLANE->value => [],
+        ];
 
         foreach ($players as $player) {
             $lane = $this->normalizePlayerLane(
-                playerLane: $player->getIdentity()->getLane(),
-                isRadiant: $isRadiant
+                $player->getIdentity()->getLane(),
+                $isRadiant
             );
 
-            match ($lane) {
-                Lane::SAFE => $safeLane[] = $player,
-                Lane::OFFLANE => $offLane[] = $player,
-                Lane::MIDDLE => $midLane = $player,
-            };
+            $lanes[$lane->value][] = $player;
         }
 
-        if (null !== $midLane) {
-            $resolved[] = $midLane->withRole(
+        $this->assertLaneComposition($lanes);
+
+        return [
+            $lanes[Lane::MIDDLE->value][0]->withRole(
                 new Role(PlayerRole::MIDDLE)
+            ),
+
+            ...$this->assignCoreSupportRoles(
+                $lanes[Lane::SAFE->value],
+                PlayerRole::CARRY,
+                PlayerRole::HARD_SUPPORT
+            ),
+
+            ...$this->assignCoreSupportRoles(
+                $lanes[Lane::OFFLANE->value],
+                PlayerRole::OFFLANE,
+                PlayerRole::SUPPORT
+            ),
+        ];
+    }
+
+    private function normalizePlayerLane(
+        MatchPlayerLane $playerLane,
+        bool $isRadiant
+    ): Lane {
+        if ($isRadiant) {
+            return $playerLane->getValue();
+        }
+
+        return match ($playerLane->getValue()) {
+            Lane::SAFE => Lane::OFFLANE,
+            Lane::OFFLANE => Lane::SAFE,
+            default => $playerLane->getValue(),
+        };
+    }
+
+    /**
+     * @param array<string, MatchPlayerPerformance[]> $lanes
+     *
+     * @throws DomainException
+     */
+    private function assertLaneComposition(array $lanes): void
+    {
+        if (count($lanes[Lane::MIDDLE->value]) !== 1) {
+            throw new DomainException(
+                sprintf(
+                    'Expected exactly 1 mid player, got %d.',
+                    count($lanes[Lane::MIDDLE->value])
+                )
             );
         }
 
-        return array_merge(
-            $resolved,
-            $this->assignCoreSupportRoles($safeLane, PlayerRole::CARRY, PlayerRole::HARD_SUPPORT),
-            $this->assignCoreSupportRoles($offLane, PlayerRole::OFFLANE, PlayerRole::SUPPORT)
-        );
+        if (count($lanes[Lane::SAFE->value]) !== 2) {
+            throw new DomainException(
+                sprintf(
+                    'Expected exactly 2 safe lane players, got %d.',
+                    count($lanes[Lane::SAFE->value])
+                )
+            );
+        }
+
+        if (count($lanes[Lane::OFFLANE->value]) !== 2) {
+            throw new DomainException(
+                sprintf(
+                    'Expected exactly 2 off lane players, got %d.',
+                    count($lanes[Lane::OFFLANE->value])
+                )
+            );
+        }
     }
 
     /**
-     * Нормализует линию игрока если он играет за dire, тк статистика привязана к карте, а не стороне
-     *
-     * @param MatchPlayerLane $playerLane
-     * @param bool $isRadiant
-     * @return Lane
+     * @param MatchPlayerPerformance[] $players
+     * @return MatchPlayerPerformance[]
      */
-    private function normalizePlayerLane(MatchPlayerLane $playerLane, bool $isRadiant): Lane
-    {
-        $lane = $playerLane->getValue();
-
-        if (!$isRadiant) {
-            $lane = match ($lane) {
-                Lane::SAFE => Lane::OFFLANE,
-                Lane::OFFLANE => Lane::SAFE,
-                default => $lane,
-            };
-        }
-
-        return $lane;
-    }
-
-    /**
-     *  Больше GPM = core
-     *  меньше GPM = support
-     *
-     * @param array $players
-     * @param PlayerRole $core
-     * @param PlayerRole $support
-     * @return array
-     */
-    private function assignCoreSupportRoles(array $players, PlayerRole $core, PlayerRole $support): array
-    {
-        if (count($players) !== 2) {
-            return [];
-        }
-
+    private function assignCoreSupportRoles(
+        array $players,
+        PlayerRole $core,
+        PlayerRole $support
+    ): array {
         usort(
             $players,
-            fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b)
-            => $b->getEconomy()->getGPM()->getValue()
+            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
+                $b->getEconomy()->getGPM()->getValue()
                 <=> $a->getEconomy()->getGPM()->getValue()
         );
 
