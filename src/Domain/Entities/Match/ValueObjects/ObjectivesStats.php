@@ -9,6 +9,7 @@ final readonly class ObjectivesStats
         private RoshanKills $roshanKills,
         private TowerKills $towerKills,
         private RunePickups $runePickups,
+        private TormentorKills $tormentorKills,
     )
     {
     }
@@ -26,5 +27,10 @@ final readonly class ObjectivesStats
     public function getRunePickups(): RunePickups
     {
         return $this->runePickups;
+    }
+
+    public function getTormentorKills(): TormentorKills
+    {
+        return $this->tormentorKills;
     }
 }

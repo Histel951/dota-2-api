@@ -22,11 +22,13 @@ class MatchExtractor implements ExtractorInterface
         'dire_team_id',
         'dire_name',
         'region',
+        'objectives',
     ];
 
     private const array PLAYER_FIELDS = [
         'account_id',
         'hero_id',
+        'player_slot',
         'isRadiant',
         'lane',
         'name',
@@ -61,6 +63,8 @@ class MatchExtractor implements ExtractorInterface
         'stuns',
         'teamfight_participation',
         'camps_stacked',
+        'ability_uses',
+        'item_usage',
     ];
 
     /**
