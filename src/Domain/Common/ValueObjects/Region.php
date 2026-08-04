@@ -1,4 +1,5 @@
 <?php
+declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Domain\Common\ValueObjects;
 
@@ -30,18 +31,22 @@ final class Region
         }
     }
 
-    public static function fromId(int $id): ?self
+    public static function fromId(?int $id): self
     {
+        if (null === $id) {
+            return self::unknown();
+        }
+
         $regionType = RegionType::tryFrom($id);
 
         if (null === $regionType) {
-            return null;
+            return self::unknown();
         }
 
         return new self(
             id: $regionType->value,
             name: $regionType->label(),
-            code: $regionType->code()
+            code: $regionType->code(),
         );
     }
 
