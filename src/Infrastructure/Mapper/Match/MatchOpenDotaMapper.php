@@ -24,6 +24,7 @@ use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\NetWorth;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
+use Histel951\Dota2Api\Domain\Common\ValueObjects\Region;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
@@ -73,7 +74,6 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerDamage;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
-use Histel951\Dota2Api\Domain\Services\RegionResolverInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
@@ -82,7 +82,6 @@ class MatchOpenDotaMapper extends AbstractMapper
 {
     public function __construct(
         private readonly RoleResolverInterface $roleResolver,
-        private readonly RegionResolverInterface $regionResolver,
     )
     {
     }
@@ -208,8 +207,6 @@ class MatchOpenDotaMapper extends AbstractMapper
             loser: $loser,
         );
 
-        $region = $this->regionResolver->resolve($optional['region']);
-
         return new MatchDetail(
             id: new MatchId($data['match_id']),
             duration: Duration::fromSeconds($data['duration']),
@@ -222,7 +219,7 @@ class MatchOpenDotaMapper extends AbstractMapper
             ),
             players: new MatchPlayers($players),
             startTime: MatchStartTime::fromTimestamp($data['start_time']),
-            region: $region,
+            region: Region::fromId($optional['region']),
         );
     }
 
