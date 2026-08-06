@@ -20,17 +20,7 @@ final readonly class TeamName
             return null;
         }
 
-        $normalized = trim($value);
-
-        if ($normalized === '') {
-            throw new InvalidTeamNameException('Team name cannot be empty');
-        }
-
-        if (preg_match('/\s{2,}/', $normalized)) {
-            throw new InvalidTeamNameException('Team name cannot contain multiple spaces in a row');
-        }
-
-        $this->value = $normalized;
+        $this->value = $value;
     }
 
     public function getValue(): ?string

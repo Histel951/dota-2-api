@@ -18,7 +18,7 @@ $client = (new Dota2ApiClientBuilder(new ConfigurationHttpClient(
 ), HttpClient::create()))->build();
 
 $matchesProvider = $client->matches();
-$detail = $matchesProvider->getMatch(new MatchId(8866148821));
+$detail = $matchesProvider->getMatch(new MatchId(8461956309));
 
 $matchDetail = $detail->getMatchDetail();
 
@@ -31,6 +31,7 @@ echo "=== Players Statistics ===\n\n";
 
 foreach ($matchDetail->getPlayers()->getValue() as $index => $player) {
     echo "Player " . ($index + 1) . ":\n";
+    echo "  ID: " . $player->getIdentity()->getPlayerId()->getValue() . "\n\n";
     echo "  Side: " . ($player->getIdentity()->getSide() === Side::RADIANT ? 'Radiant' : 'Dire') . "\n";
     echo "  Hero ID: " . $player->getIdentity()->getHeroId()->getValue() . "\n";
     echo "  KDA: " . $player->getKda()->getKills() . "/" . $player->getKda()->getDeaths() . "/" . $player->getKda()->getAssists() . "\n";
@@ -48,7 +49,8 @@ foreach ($matchDetail->getPlayers()->getValue() as $index => $player) {
     echo "  Utility Stats:\n";
     echo "    Smoke Uses: " . $player->getUtility()->getSmokeUses()->getValue() . "\n";
     echo "  Warding Stats:\n";
-    echo "    Observer Takeovers: " . $player->getWarding()->getObserverTakeovers()->getValue() . "\n";
+    echo "    Watcher: " . $player->getWarding()->getObserverTakeovers()->getValue() . "\n";
     echo "    Observers Placed: " . $player->getWarding()->getObserversPlaced()->getValue() . "\n";
+    echo "    smoke uses: " . $player->getUtility()->getSmokeUses()->getValue() . "\n";
     echo "\n";
 }

@@ -289,7 +289,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 courierKills: new CourierKills($playerData['courier_kills']),
                 stuns: new Stuns($playerData['stuns']),
                 teamfightParticipation: new TeamfightParticipation($playerData['teamfight_participation']),
-                smokeUses: new SmokeUses($playerData['item_usage']['smoke_of_deceit'] ?? 0),
+                smokeUses: new SmokeUses($playerData['item_uses']['smoke_of_deceit'] ?? 0),
             ),
         );
     }
