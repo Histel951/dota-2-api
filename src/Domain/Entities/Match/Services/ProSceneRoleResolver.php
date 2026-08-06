@@ -141,34 +141,15 @@ final class ProSceneRoleResolver implements RoleResolverInterface
     /**
      * @param MatchPlayerPerformance[] $players
      * @return MatchPlayerPerformance[]
+     * @throws DomainException
      */
     private function resolveSafeLanePlayers(array $players): array
     {
-        $count = count($players);
-
-        if ($count === 0) {
-            return [];
-        }
-
-        if ($count === 1) {
-            return [
-                $players[0]->withRole(new Role(PlayerRole::CARRY))
-            ];
-        }
-
-        if ($count === 2) {
-            return $this->assignCoreSupportRoles(
-                $players,
-                PlayerRole::CARRY,
-                PlayerRole::HARD_SUPPORT
-            );
-        }
-
-        throw new DomainException(
-            sprintf(
-                'Unexpected number of players on safe lane: %d.',
-                $count
-            )
+        return $this->resolveLanePlayers(
+            $players,
+            PlayerRole::CARRY,
+            PlayerRole::HARD_SUPPORT,
+            'safe'
         );
     }
 
@@ -179,6 +160,30 @@ final class ProSceneRoleResolver implements RoleResolverInterface
      */
     private function resolveOfflanePlayers(array $players): array
     {
+        return $this->resolveLanePlayers(
+            $players,
+            PlayerRole::OFFLANE,
+            PlayerRole::SUPPORT,
+            'offlane'
+        );
+    }
+
+    /**
+     * Обобщенный метод для обработки игроков на линии
+     *
+     * @param MatchPlayerPerformance[] $players
+     * @param PlayerRole $coreRole Роль core игрока
+     * @param PlayerRole $supportRole Роль саппорта (для случая с 2 игроками)
+     * @param string $laneName Название линии для сообщений об ошибках
+     * @return MatchPlayerPerformance[]
+     * @throws DomainException
+     */
+    private function resolveLanePlayers(
+        array $players,
+        PlayerRole $coreRole,
+        PlayerRole $supportRole,
+        string $laneName
+    ): array {
         $count = count($players);
 
         if ($count === 0) {
@@ -187,21 +192,26 @@ final class ProSceneRoleResolver implements RoleResolverInterface
 
         if ($count === 1) {
             return [
-                $players[0]->withRole(new Role(PlayerRole::OFFLANE))
+                $players[0]->withRole(new Role($coreRole))
             ];
         }
 
         if ($count === 2) {
             return $this->assignCoreSupportRoles(
                 $players,
-                PlayerRole::OFFLANE,
-                PlayerRole::SUPPORT
+                $coreRole,
+                $supportRole
             );
+        }
+
+        if ($count >= 3) {
+            return $this->assignCoreWithSupports($players, $coreRole);
         }
 
         throw new DomainException(
             sprintf(
-                'Unexpected number of players on offlane: %d.',
+                'Unexpected number of players on %s lane: %d.',
+                $laneName,
                 $count
             )
         );
@@ -263,12 +273,7 @@ final class ProSceneRoleResolver implements RoleResolverInterface
         array $safePlayers,
         array $offlanePlayers
     ): array {
-        usort(
-            $middlePlayers,
-            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
-                $b->getEconomy()->getGPM()->getValue()
-                <=> $a->getEconomy()->getGPM()->getValue()
-        );
+        $this->sortByGPM($middlePlayers);
 
         $hasSafeSupport = count($safePlayers) === 2;
         $hasOfflaneSupport = count($offlanePlayers) === 2;
@@ -310,12 +315,7 @@ final class ProSceneRoleResolver implements RoleResolverInterface
             );
         }
 
-        usort(
-            $middlePlayers,
-            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
-                $b->getEconomy()->getGPM()->getValue()
-                <=> $a->getEconomy()->getGPM()->getValue()
-        );
+        $this->sortByGPM($middlePlayers);
 
         $realMiddle = array_shift($middlePlayers);
         $supports = $this->assignSupportsByWards($middlePlayers);
@@ -327,10 +327,48 @@ final class ProSceneRoleResolver implements RoleResolverInterface
     }
 
     /**
+     * Назначает роли для 3+ игроков на линии: core игрок и саппорты
+     *
      * @param MatchPlayerPerformance[] $players
+     * @param PlayerRole $coreRole
      * @return MatchPlayerPerformance[]
      */
-    private function assignSupportsByWards(array $players): array
+    private function assignCoreWithSupports(array $players, PlayerRole $coreRole): array
+    {
+        $this->sortByGPM($players);
+
+        $core = array_shift($players);
+        $supports = $this->assignSupportsByWards($players);
+
+        return [
+            $core->withRole(new Role($coreRole)),
+            ...$supports,
+        ];
+    }
+
+    /**
+     * Сортирует игроков по GPM (по убыванию)
+     *
+     * @param MatchPlayerPerformance[] $players
+     * @return void
+     */
+    private function sortByGPM(array &$players): void
+    {
+        usort(
+            $players,
+            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
+                $b->getEconomy()->getGPM()->getValue()
+                <=> $a->getEconomy()->getGPM()->getValue()
+        );
+    }
+
+    /**
+     * Сортирует игроков по количеству sentry wards (по убыванию)
+     *
+     * @param MatchPlayerPerformance[] $players
+     * @return void
+     */
+    private function sortBySentryWards(array &$players): void
     {
         usort(
             $players,
@@ -338,6 +376,17 @@ final class ProSceneRoleResolver implements RoleResolverInterface
                 $b->getWarding()->getSentryPlaced()->getValue()
                 <=> $a->getWarding()->getSentryPlaced()->getValue()
         );
+    }
+
+    /**
+     * Назначает роли саппортов по количеству sentry wards
+     *
+     * @param MatchPlayerPerformance[] $players
+     * @return MatchPlayerPerformance[]
+     */
+    private function assignSupportsByWards(array $players): array
+    {
+        $this->sortBySentryWards($players);
 
         return [
             $players[0]->withRole(new Role(PlayerRole::HARD_SUPPORT)),
@@ -346,7 +395,11 @@ final class ProSceneRoleResolver implements RoleResolverInterface
     }
 
     /**
+     * Назначает роли для 2 игроков: core и саппорт по GPM
+     *
      * @param MatchPlayerPerformance[] $players
+     * @param PlayerRole $core
+     * @param PlayerRole $support
      * @return MatchPlayerPerformance[]
      */
     private function assignCoreSupportRoles(
@@ -354,12 +407,7 @@ final class ProSceneRoleResolver implements RoleResolverInterface
         PlayerRole $core,
         PlayerRole $support
     ): array {
-        usort(
-            $players,
-            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
-                $b->getEconomy()->getGPM()->getValue()
-                <=> $a->getEconomy()->getGPM()->getValue()
-        );
+        $this->sortByGPM($players);
 
         return [
             $players[0]->withRole(new Role($core)),

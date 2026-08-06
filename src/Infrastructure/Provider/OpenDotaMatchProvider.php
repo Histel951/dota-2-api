@@ -47,6 +47,7 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
 
             return new MatchResult($id, $entity, null);
         } catch (Throwable $e) {
+            dd($e->getMessage());
             return new MatchResult($id, null, $e);
         }
     }
