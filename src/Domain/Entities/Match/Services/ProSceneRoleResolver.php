@@ -50,24 +50,24 @@ final class ProSceneRoleResolver implements RoleResolverInterface
             $lanes[$lane->value][] = $player;
         }
 
-        $this->assertLaneComposition($lanes);
+        $middlePlayers = $this->resolveMiddlePlayers(
+            $lanes[Lane::MIDDLE->value],
+            $lanes[Lane::SAFE->value],
+            $lanes[Lane::OFFLANE->value]
+        );
+
+        $safePlayers = $this->resolveSafeLanePlayers(
+            $lanes[Lane::SAFE->value]
+        );
+
+        $offlanePlayers = $this->resolveOfflanePlayers(
+            $lanes[Lane::OFFLANE->value]
+        );
 
         return [
-            $lanes[Lane::MIDDLE->value][0]->withRole(
-                new Role(PlayerRole::MIDDLE)
-            ),
-
-            ...$this->assignCoreSupportRoles(
-                $lanes[Lane::SAFE->value],
-                PlayerRole::CARRY,
-                PlayerRole::HARD_SUPPORT
-            ),
-
-            ...$this->assignCoreSupportRoles(
-                $lanes[Lane::OFFLANE->value],
-                PlayerRole::OFFLANE,
-                PlayerRole::SUPPORT
-            ),
+            ...$middlePlayers,
+            ...$safePlayers,
+            ...$offlanePlayers,
         ];
     }
 
@@ -136,6 +136,213 @@ final class ProSceneRoleResolver implements RoleResolverInterface
             $lanes[Lane::OFFLANE->value],
             2
         );
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $players
+     * @return MatchPlayerPerformance[]
+     */
+    private function resolveSafeLanePlayers(array $players): array
+    {
+        $count = count($players);
+
+        if ($count === 0) {
+            return [];
+        }
+
+        if ($count === 1) {
+            return [
+                $players[0]->withRole(new Role(PlayerRole::CARRY))
+            ];
+        }
+
+        if ($count === 2) {
+            return $this->assignCoreSupportRoles(
+                $players,
+                PlayerRole::CARRY,
+                PlayerRole::HARD_SUPPORT
+            );
+        }
+
+        throw new DomainException(
+            sprintf(
+                'Unexpected number of players on safe lane: %d.',
+                $count
+            )
+        );
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $players
+     * @return MatchPlayerPerformance[]
+     * @throws DomainException
+     */
+    private function resolveOfflanePlayers(array $players): array
+    {
+        $count = count($players);
+
+        if ($count === 0) {
+            return [];
+        }
+
+        if ($count === 1) {
+            return [
+                $players[0]->withRole(new Role(PlayerRole::OFFLANE))
+            ];
+        }
+
+        if ($count === 2) {
+            return $this->assignCoreSupportRoles(
+                $players,
+                PlayerRole::OFFLANE,
+                PlayerRole::SUPPORT
+            );
+        }
+
+        throw new DomainException(
+            sprintf(
+                'Unexpected number of players on offlane: %d.',
+                $count
+            )
+        );
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $middlePlayers
+     * @param MatchPlayerPerformance[] $safePlayers
+     * @param MatchPlayerPerformance[] $offlanePlayers
+     * @return MatchPlayerPerformance[]
+     * @throws DomainException
+     */
+    private function resolveMiddlePlayers(
+        array $middlePlayers,
+        array $safePlayers,
+        array $offlanePlayers
+    ): array {
+        $middleCount = count($middlePlayers);
+
+        if ($middleCount === 1) {
+            return [
+                $middlePlayers[0]->withRole(new Role(PlayerRole::MIDDLE))
+            ];
+        }
+
+        if ($middleCount === 2) {
+            return $this->resolveTwoMiddlePlayers(
+                $middlePlayers,
+                $safePlayers,
+                $offlanePlayers
+            );
+        }
+
+        if ($middleCount === 3) {
+            return $this->resolveThreeMiddlePlayers(
+                $middlePlayers,
+                $safePlayers,
+                $offlanePlayers
+            );
+        }
+
+        throw new DomainException(
+            sprintf(
+                'Unexpected number of players on middle lane: %d.',
+                $middleCount
+            )
+        );
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $middlePlayers
+     * @param MatchPlayerPerformance[] $safePlayers
+     * @param MatchPlayerPerformance[] $offlanePlayers
+     * @return MatchPlayerPerformance[]
+     * @throws DomainException
+     */
+    private function resolveTwoMiddlePlayers(
+        array $middlePlayers,
+        array $safePlayers,
+        array $offlanePlayers
+    ): array {
+        usort(
+            $middlePlayers,
+            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
+                $b->getEconomy()->getGPM()->getValue()
+                <=> $a->getEconomy()->getGPM()->getValue()
+        );
+
+        $hasSafeSupport = count($safePlayers) === 2;
+        $hasOfflaneSupport = count($offlanePlayers) === 2;
+
+        if (!$hasSafeSupport) {
+            return [
+                $middlePlayers[0]->withRole(new Role(PlayerRole::MIDDLE)),
+                $middlePlayers[1]->withRole(new Role(PlayerRole::HARD_SUPPORT)),
+            ];
+        }
+
+        if (!$hasOfflaneSupport) {
+            return [
+                $middlePlayers[0]->withRole(new Role(PlayerRole::MIDDLE)),
+                $middlePlayers[1]->withRole(new Role(PlayerRole::SUPPORT)),
+            ];
+        }
+
+        throw new DomainException(
+            'Cannot resolve roles: two players on middle lane with normal lane composition.'
+        );
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $middlePlayers
+     * @param MatchPlayerPerformance[] $safePlayers
+     * @param MatchPlayerPerformance[] $offlanePlayers
+     * @return MatchPlayerPerformance[]
+     * @throws DomainException
+     */
+    private function resolveThreeMiddlePlayers(
+        array $middlePlayers,
+        array $safePlayers,
+        array $offlanePlayers
+    ): array {
+        if (count($safePlayers) !== 1 || count($offlanePlayers) !== 1) {
+            throw new DomainException(
+                'Cannot resolve roles: three players on middle lane require exactly one player on each other lane.'
+            );
+        }
+
+        usort(
+            $middlePlayers,
+            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
+                $b->getEconomy()->getGPM()->getValue()
+                <=> $a->getEconomy()->getGPM()->getValue()
+        );
+
+        $realMiddle = array_shift($middlePlayers);
+        $supports = $this->assignSupportsByWards($middlePlayers);
+
+        return [
+            $realMiddle->withRole(new Role(PlayerRole::MIDDLE)),
+            ...$supports,
+        ];
+    }
+
+    /**
+     * @param MatchPlayerPerformance[] $players
+     * @return MatchPlayerPerformance[]
+     */
+    private function assignSupportsByWards(array $players): array
+    {
+        usort(
+            $players,
+            static fn (MatchPlayerPerformance $a, MatchPlayerPerformance $b): int =>
+                $b->getWarding()->getSentryPlaced()->getValue()
+                <=> $a->getWarding()->getSentryPlaced()->getValue()
+        );
+
+        return [
+            $players[0]->withRole(new Role(PlayerRole::HARD_SUPPORT)),
+            $players[1]->withRole(new Role(PlayerRole::SUPPORT)),
+        ];
     }
 
     /**
