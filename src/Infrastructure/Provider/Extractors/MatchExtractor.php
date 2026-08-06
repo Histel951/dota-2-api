@@ -65,6 +65,7 @@ class MatchExtractor implements ExtractorInterface
         'camps_stacked',
         'ability_uses',
         'item_usage',
+        'item_uses',
     ];
 
     /**
