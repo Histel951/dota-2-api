@@ -239,7 +239,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 playerId: new PlayerId($playerData['account_id']),
                 heroId: new HeroId($playerData['hero_id']),
                 side: $playerData['isRadiant'] ? Side::RADIANT : Side::DIRE,
-                lane: new MatchPlayerLane(Lane::from($playerData['lane'])),
+                lane: new MatchPlayerLane($this->resolveLane($playerData)),
                 playerProName: new PlayerName($playerData['name']),
                 playerPersonaName: new PlayerName($playerData['personaname']),
             ),
@@ -341,6 +341,40 @@ class MatchOpenDotaMapper extends AbstractMapper
             players: new MatchPlayers($players),
             side: $side,
         );
+    }
+
+    /**
+     * Определяет линию игрока, учитывая роуминг
+     *
+     * Для роумеров (lane=5) определяет линию по lane_role:
+     * - lane_role 1 (Carry) → SAFE
+     * - lane_role 2 (Mid) → MIDDLE
+     * - lane_role 3 (Offlane) → OFFLANE
+     * - lane_role 4 (Soft Support) → OFFLANE
+     * - lane_role 5 (Hard Support) → SAFE
+     *
+     * @param array $playerData Данные игрока от OpenDota
+     * @return Lane Линия игрока
+     */
+    private function resolveLane(array $playerData): Lane
+    {
+        $lane = $playerData['lane'] ?? 1;
+        $laneRole = $playerData['lane_role'] ?? null;
+        $isRoaming = $playerData['is_roaming'] ?? false;
+
+        if ($lane !== 5 && Lane::tryFrom($lane) !== null) {
+            return Lane::from($lane);
+        }
+
+        if ($isRoaming && $laneRole !== null) {
+            return match ($laneRole) {
+                2 => Lane::MIDDLE,
+                3, 4 => Lane::OFFLANE,
+                default => Lane::SAFE,
+            };
+        }
+
+        return Lane::SAFE;
     }
 
     /**
