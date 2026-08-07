@@ -240,7 +240,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 heroId: new HeroId($playerData['hero_id']),
                 side: $playerData['isRadiant'] ? Side::RADIANT : Side::DIRE,
                 lane: new MatchPlayerLane($this->resolveLane($playerData)),
-                playerProName: new PlayerName($playerData['name']),
+                playerProName: new PlayerName($playerData['name'] ?? $playerData['personaname']),
                 playerPersonaName: new PlayerName($playerData['personaname']),
             ),
             kda: new KDA(
