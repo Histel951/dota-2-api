@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Infrastructure\Provider;
+namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 
 use Generator;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
@@ -11,7 +11,7 @@ use Histel951\Dota2Api\Domain\Providers\Results\MatchFetchResult;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
-use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use SplObjectStorage;
 use SplQueue;
