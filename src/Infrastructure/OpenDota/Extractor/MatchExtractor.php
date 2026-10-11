@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Infrastructure\Provider\Extractors;
+namespace Histel951\Dota2Api\Infrastructure\OpenDota\Extractor;
 
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use JsonException;

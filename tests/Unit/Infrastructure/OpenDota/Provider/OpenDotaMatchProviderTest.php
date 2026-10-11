@@ -1,17 +1,17 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\Provider;
+namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
-use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
-use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
 use JsonException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -19,7 +19,7 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 class OpenDotaMatchProviderTest extends TestCase
 {
-    private const string FIXTURE = __DIR__ . '/../../../Fixtures/opendota/match_8794744726.json';
+    private const string FIXTURE = __DIR__ . '/../../../../Fixtures/opendota/match_8794744726.json';
 
     public function test_getMatchReturnsMatchDetail()
     {
