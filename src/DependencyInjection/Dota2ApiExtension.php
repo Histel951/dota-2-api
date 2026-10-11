@@ -3,22 +3,11 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
-use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
-use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
-use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
-use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
-use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
-use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamPlayerOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
-use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
+use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
+use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaProviderFactory;
+use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Extension\Extension;
@@ -35,25 +24,12 @@ final class Dota2ApiExtension extends Extension
             $configs
         );
 
-        $container->setParameter(
-            'dota2_api.base_url',
-            $config['base_url']
-        );
+        $source = ApiSource::from($config['source']);
 
-        $container->setParameter(
-            'dota2_api.api_key',
-            $config['api_key']
-        );
-
-        $container->setParameter(
-            'dota2_api.timeout',
-            $config['timeout']
-        );
-
-        $container->setParameter(
-            'dota2_api.source',
-            ApiSource::from($config['source'])
-        );
+        $container->setParameter('dota2_api.base_url', $config['base_url']);
+        $container->setParameter('dota2_api.api_key', $config['api_key']);
+        $container->setParameter('dota2_api.timeout', $config['timeout']);
+        $container->setParameter('dota2_api.source', $source);
 
         $loader = new PhpFileLoader(
             $container,
@@ -62,37 +38,19 @@ final class Dota2ApiExtension extends Extension
 
         $loader->load('services.php');
 
-        $container->autowire(
-            ApiGatewayInterface::class,
-            ApiGateway::class,
-        );
+        match ($source) {
+            ApiSource::OPENDOTA => $this->loadOpenDota($container),
+            ApiSource::STRATZ => throw new InvalidConfigurationException(
+                'dota2_api.source "stratz" is not implemented yet, use "opendota".'
+            ),
+        };
+    }
 
-        $container->autowire(
-            ExtractorInterface::class,
-            MatchExtractor::class,
-        )->setPublic(true);
+    private function loadOpenDota(ContainerBuilder $container): void
+    {
+        $container->getDefinition('dota2_api.http_client')
+            ->setFactory([OpenDotaHttpClientFactory::class, 'create']);
 
-        $container->autowire(
-            RoleResolverInterface::class,
-            ProSceneRoleResolver::class
-        )->setPublic(true);
-
-        if (ApiSource::OPENDOTA->value === $config['source']) {
-            $container->autowire(MatchOpenDotaMapper::class)->setPublic(true);
-            $container->autowire(TeamMatchOpenDotaMapper::class)->setPublic(true);
-            $container->autowire(TeamHeroOpenDotaMapper::class)->setPublic(true);
-            $container->autowire(TeamOpenDotaMapper::class)->setPublic(true);
-            $container->autowire(TeamPlayerOpenDotaMapper::class)->setPublic(true);
-
-            $container->autowire(
-                MatchesProviderInterface::class,
-                OpenDotaMatchProvider::class,
-            )->addTag('dota2_api.provider');
-
-            $container->autowire(
-                TeamProviderInterface::class,
-                OpenDotaTeamProvider::class,
-            )->addTag('dota2_api.provider');
-        }
+        $container->autowire(ProviderFactory::class, OpenDotaProviderFactory::class);
     }
 }
