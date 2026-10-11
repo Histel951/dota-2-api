@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-namespace Histel951\Dota2Api\Infrastructure\Provider;
+namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
@@ -12,10 +12,10 @@ use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamPlayerOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
 
 class OpenDotaTeamProvider implements TeamProviderInterface
 {
