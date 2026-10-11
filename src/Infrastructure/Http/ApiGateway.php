@@ -9,6 +9,7 @@ use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpStatusCode;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 use Throwable;
@@ -16,7 +17,7 @@ use Throwable;
 class ApiGateway implements ApiGatewayInterface
 {
     public function __construct(
-        private readonly OpenDotaHttpClient $httpClient,
+        private readonly HttpClientInterface $httpClient,
     )
     {
     }

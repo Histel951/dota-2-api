@@ -7,10 +7,13 @@ use Histel951\Dota2Api\Infrastructure\Exceptions\Dota2ApiClientBuilderException;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
-use Histel951\Dota2Api\Infrastructure\Http\OpenDotaHttpClient;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaProviderFactory;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
+/**
+ * Сборка клиента без Symfony DI. В Symfony тот же граф собирает Dota2ApiExtension
+ */
 final class Dota2ApiClientBuilder
 {
     public function __construct(
@@ -25,15 +28,10 @@ final class Dota2ApiClientBuilder
      */
     public function build(): Dota2ApiClient
     {
-        $httpClient = new OpenDotaHttpClient(
-            $this->client,
-            $this->cfg,
-        );
-
-        $gateway = new ApiGateway($httpClient);
-
         $factory = match ($this->cfg->getApiSource()) {
-            ApiSource::OPENDOTA => new OpenDotaProviderFactory($gateway),
+            ApiSource::OPENDOTA => new OpenDotaProviderFactory(
+                new ApiGateway(OpenDotaHttpClientFactory::create($this->client, $this->cfg))
+            ),
             ApiSource::STRATZ => throw new Dota2ApiClientBuilderException('To be implemented'),
         };
 
