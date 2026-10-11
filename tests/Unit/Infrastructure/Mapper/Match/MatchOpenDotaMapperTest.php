@@ -97,9 +97,67 @@ class MatchOpenDotaMapperTest extends TestCase
         ];
     }
 
-    private function mapFixture(): MatchDetail
+    public function test_toEntityMapsMatchWithoutTeams()
     {
-        return $this->mapper->toEntity($this->extractor->extract(file_get_contents(self::FIXTURE)));
+        $match = $this->mapFixture(static function (array $data): array {
+            $data['radiant_team_id'] = null;
+            $data['radiant_name'] = null;
+            $data['dire_team_id'] = null;
+            $data['dire_name'] = null;
+
+            return $data;
+        });
+
+        $this->assertNull($match->getRadiant()->getTeamId()->getValue());
+        $this->assertNull($match->getRadiant()->getTeamName()->getValue());
+        $this->assertNull($match->getDire()->getTeamName()->getValue());
+    }
+
+    #[DataProvider('jungleLaneProvider')]
+    public function test_toEntityResolvesJungleLaneFromLaneRole(int $accountId, int $laneRole, Lane $expected)
+    {
+        $match = $this->mapFixture(static function (array $data) use ($accountId, $laneRole): array {
+            foreach ($data['players'] as &$player) {
+                if ($player['account_id'] === $accountId) {
+                    $player['lane'] = $player['isRadiant'] ? 4 : 5;
+                    $player['lane_role'] = $laneRole;
+                }
+            }
+
+            return $data;
+        });
+
+        $player = $this->findPlayer($match, $accountId);
+
+        $this->assertSame($expected, $player->getIdentity()->getLane()->getValue());
+    }
+
+    public static function jungleLaneProvider(): array
+    {
+        // линия возвращается со стороны radiant: safe lane dire — это Lane::OFFLANE
+        return [
+            'radiant safe' => [898754153, 1, Lane::SAFE],
+            'radiant offlane' => [98887913, 3, Lane::OFFLANE],
+            'radiant jungle' => [94296097, 4, Lane::SAFE],
+            'dire safe' => [170896543, 1, Lane::OFFLANE],
+            'dire middle' => [315272623, 2, Lane::MIDDLE],
+            'dire offlane' => [145957968, 3, Lane::SAFE],
+            'dire jungle' => [249835593, 4, Lane::OFFLANE],
+        ];
+    }
+
+    /**
+     * @param callable(array): array|null $modify правка сырого ответа OpenDota перед маппингом
+     */
+    private function mapFixture(?callable $modify = null): MatchDetail
+    {
+        $json = file_get_contents(self::FIXTURE);
+
+        if (null !== $modify) {
+            $json = json_encode($modify(json_decode($json, true)));
+        }
+
+        return $this->mapper->toEntity($this->extractor->extract($json));
     }
 
     private function findPlayer(MatchDetail $match, int $accountId): MatchPlayerPerformance

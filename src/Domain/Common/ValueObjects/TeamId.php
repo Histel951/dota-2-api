@@ -13,7 +13,7 @@ final readonly class TeamId
      * @throws InvalidTeamIdException
      */
     public function __construct(
-        string|int $value = null
+        string|int|null $value = null
     )
     {
         if (null === $value) {
@@ -36,7 +36,7 @@ final readonly class TeamId
         $this->value = $normalized;
     }
 
-    public function getValue(): string
+    public function getValue(): ?string
     {
         return $this->value;
     }
@@ -53,6 +53,6 @@ final readonly class TeamId
 
     public function __toString(): string
     {
-        return $this->value;
+        return $this->value ?? '';
     }
 }

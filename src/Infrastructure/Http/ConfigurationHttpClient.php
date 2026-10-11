@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Infrastructure\Http;
 
@@ -27,7 +28,7 @@ class ConfigurationHttpClient
         return $this->apiKey;
     }
 
-    public function getTimeout(): ?string
+    public function getTimeout(): ?int
     {
         return $this->timeout;
     }
