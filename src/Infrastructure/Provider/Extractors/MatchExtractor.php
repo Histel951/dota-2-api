@@ -31,6 +31,7 @@ class MatchExtractor implements ExtractorInterface
         'player_slot',
         'isRadiant',
         'lane',
+        'lane_role',
         'name',
         'personaname',
         'kills',
