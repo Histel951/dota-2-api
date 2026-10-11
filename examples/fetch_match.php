@@ -1,15 +1,13 @@
 <?php
 
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
-use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
 use Symfony\Component\HttpClient\HttpClient;
 
-require_once 'vendor/autoload.php';
+require_once __DIR__ . '/../vendor/autoload.php';
 
 $client = (new Dota2ApiClientBuilder(new ConfigurationHttpClient(
     baseUrl: 'https://api.opendota.com/api/',
@@ -18,9 +16,14 @@ $client = (new Dota2ApiClientBuilder(new ConfigurationHttpClient(
 ), HttpClient::create()))->build();
 
 $matchesProvider = $client->matches();
-$detail = $matchesProvider->getMatch(new MatchId(8461956309));
+$detail = $matchesProvider->getMatch(new MatchId(8794744726));
 
 $matchDetail = $detail->getMatchDetail();
+
+if (null === $matchDetail) {
+    echo "Failed to map match: " . $detail->getError()->getMessage() . "\n";
+    exit(1);
+}
 
 echo "=== Match ID: " . $matchDetail->getId()->getValue() . " ===\n\n";
 echo "Duration: " . $matchDetail->getDuration()->getSeconds() . " seconds\n";
@@ -50,6 +53,7 @@ foreach ($matchDetail->getPlayers()->getValue() as $index => $player) {
     echo "    Smoke Uses: " . $player->getUtility()->getSmokeUses()->getValue() . "\n";
     echo "  Warding Stats:\n";
     echo "    Watcher: " . $player->getWarding()->getObserverTakeovers()->getValue() . "\n";
+    echo "    Sentry Placed: " . $player->getWarding()->getSentryPlaced()->getValue() . "\n";
     echo "    Observers Placed: " . $player->getWarding()->getObserversPlaced()->getValue() . "\n";
     echo "    smoke uses: " . $player->getUtility()->getSmokeUses()->getValue() . "\n";
     echo "\n";
