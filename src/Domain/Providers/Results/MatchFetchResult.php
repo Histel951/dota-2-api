@@ -1,13 +1,16 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Infrastructure\Provider\Results;
+namespace Histel951\Dota2Api\Domain\Providers\Results;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Throwable;
 
-final readonly class MatchResult
+/**
+ * Результат загрузки матча: либо MatchDetail, либо ошибка — чтобы ошибка одного матча не прерывала пакетную загрузку
+ */
+final readonly class MatchFetchResult
 {
     public function __construct(
         private MatchId      $matchId,

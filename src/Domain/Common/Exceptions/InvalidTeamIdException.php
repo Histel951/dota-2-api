@@ -1,5 +1,6 @@
 <?php
+declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Common\Exceptions;
 
-class InvalidTeamIdException extends \Exception {}
+class InvalidTeamIdException extends DomainException {}
