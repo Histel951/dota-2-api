@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\Mapper\Match;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidCounterException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidDurationException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidGPMException;
@@ -12,6 +13,7 @@ use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidKDAException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerNameException;
+use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidRegionException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamNameException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidXPMException;
@@ -77,6 +79,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use TypeError;
 
 class MatchOpenDotaMapper extends AbstractMapper
 {
@@ -103,6 +106,20 @@ class MatchOpenDotaMapper extends AbstractMapper
     ];
 
     /**
+     * Любая ошибка данных (доменная валидация, неожиданный тип поля) отдаётся как MappingException
+     *
+     * @throws MappingException
+     */
+    public function toEntity(array $data): MatchDetail
+    {
+        try {
+            return $this->createMatch($data);
+        } catch (DomainException|InvalidRegionException|TypeError $e) {
+            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+        }
+    }
+
+    /**
      * @throws InvalidXPMException
      * @throws InvalidGPMException
      * @throws InvalidDurationException
@@ -116,8 +133,9 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidDraftOrderException
      * @throws InvalidPlayerNameException
      * @throws InvalidCounterException
+     * @throws DomainException
      */
-    function toEntity(array $data): MatchDetail
+    private function createMatch(array $data): MatchDetail
     {
         $this->validate($data, self::REQUIRED_FIELDS);
         $optional = $this->extractOptionalFields($data, self::OPTIONAL_FIELDS);

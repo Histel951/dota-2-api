@@ -7,12 +7,12 @@ use Generator;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
+use Histel951\Dota2Api\Domain\Providers\Results\MatchFetchResult;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
-use Histel951\Dota2Api\Infrastructure\Provider\Results\MatchResult;
 use SplObjectStorage;
 use SplQueue;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
@@ -30,10 +30,10 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
 
     /**
      * @param MatchId $id
-     * @return MatchResult
+     * @return MatchFetchResult
      * @throws ApiGatewayException
      */
-    public function getMatch(MatchId $id): MatchResult
+    public function getMatch(MatchId $id): MatchFetchResult
     {
         $response = $this->gateway->request(
             HttpMethod::GET,
@@ -45,9 +45,9 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
             $extracted = $this->extractor->extract($json);
             $entity = $this->mapper->toEntity($extracted);
 
-            return new MatchResult($id, $entity, null);
+            return new MatchFetchResult($id, $entity, null);
         } catch (Throwable $e) {
-            return new MatchResult($id, null, $e);
+            return new MatchFetchResult($id, null, $e);
         }
     }
 
@@ -97,10 +97,10 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
                     $extracted = $this->extractor->extract($json);
                     $entity = $this->mapper->toEntity($extracted);
 
-                    yield new MatchResult(new MatchId($id), $entity, null);
+                    yield new MatchFetchResult(new MatchId($id), $entity, null);
                 } catch (Throwable $e) {
 
-                    yield new MatchResult(new MatchId($id), null, $e);
+                    yield new MatchFetchResult(new MatchId($id), null, $e);
                 } finally {
                     unset($pending[$id]);
                     unset($responseMap[$response]);
