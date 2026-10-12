@@ -8,8 +8,8 @@ use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
-use Histel951\Dota2Api\Infrastructure\Http\OpenDotaHttpClient;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
 use JsonException;
@@ -65,7 +65,7 @@ class OpenDotaMatchProviderTest extends TestCase
      */
     private function createProvider(array $responses): OpenDotaMatchProvider
     {
-        $httpClient = new OpenDotaHttpClient(
+        $httpClient = OpenDotaHttpClientFactory::create(
             new MockHttpClient($responses),
             new ConfigurationHttpClient(baseUrl: 'https://api.opendota.com/api/', apiSource: ApiSource::OPENDOTA),
         );

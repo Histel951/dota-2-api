@@ -6,6 +6,7 @@ namespace Histel951\Dota2Api\Infrastructure\Provider;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
+use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
@@ -17,17 +18,21 @@ use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 
 final class OpenDotaProviderFactory implements ProviderFactory
 {
+    private readonly RoleResolverInterface $roleResolver;
+
     public function __construct(
         private readonly ApiGatewayInterface $gateway,
+        ?RoleResolverInterface $roleResolver = null,
     )
     {
+        $this->roleResolver = $roleResolver ?? new ProSceneRoleResolver();
     }
 
     public function createMatchProvider(): MatchesProviderInterface
     {
         return new OpenDotaMatchProvider(
             gateway: $this->gateway,
-            mapper: new MatchOpenDotaMapper(new ProSceneRoleResolver()),
+            mapper: new MatchOpenDotaMapper($this->roleResolver),
             extractor: new MatchExtractor(),
         );
     }
