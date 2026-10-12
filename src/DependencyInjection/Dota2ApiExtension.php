@@ -5,8 +5,8 @@ namespace Histel951\Dota2Api\DependencyInjection;
 
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaProviderFactory;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaProviderFactory;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -26,9 +26,8 @@ final class Dota2ApiExtension extends Extension
 
         $source = ApiSource::from($config['source']);
 
-        $container->setParameter('dota2_api.base_url', $config['base_url']);
-        $container->setParameter('dota2_api.api_key', $config['api_key']);
         $container->setParameter('dota2_api.timeout', $config['timeout']);
+        $container->setParameter('dota2_api.max_retries', $config['max_retries']);
         $container->setParameter('dota2_api.source', $source);
 
         $loader = new PhpFileLoader(
@@ -39,15 +38,19 @@ final class Dota2ApiExtension extends Extension
         $loader->load('services.php');
 
         match ($source) {
-            ApiSource::OPENDOTA => $this->loadOpenDota($container),
+            ApiSource::OPENDOTA => $this->loadOpenDota($config, $container),
             ApiSource::STRATZ => throw new InvalidConfigurationException(
                 'dota2_api.source "stratz" is not implemented yet, use "opendota".'
             ),
         };
     }
 
-    private function loadOpenDota(ContainerBuilder $container): void
+    private function loadOpenDota(array $config, ContainerBuilder $container): void
     {
+        // корневые base_url и api_key — устаревшие алиасы секции opendota
+        $container->setParameter('dota2_api.base_url', $config['base_url'] ?? $config['opendota']['base_url']);
+        $container->setParameter('dota2_api.api_key', $config['api_key'] ?? $config['opendota']['api_key']);
+
         $container->getDefinition('dota2_api.http_client')
             ->setFactory([OpenDotaHttpClientFactory::class, 'create']);
 

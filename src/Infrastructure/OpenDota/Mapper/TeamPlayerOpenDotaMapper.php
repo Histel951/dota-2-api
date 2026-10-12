@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Infrastructure\Mapper\Team;
+namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidStatsException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;

@@ -8,7 +8,7 @@ use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
 use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaProviderFactory;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaProviderFactory;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**

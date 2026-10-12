@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Infrastructure\Mapper\Match;
+namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
