@@ -4,15 +4,18 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\Mapper\Match;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
+use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use TypeError;
 
 class MatchOpenDotaMapperTest extends TestCase
 {
@@ -111,6 +114,36 @@ class MatchOpenDotaMapperTest extends TestCase
         $this->assertNull($match->getRadiant()->getTeamId()->getValue());
         $this->assertNull($match->getRadiant()->getTeamName()->getValue());
         $this->assertNull($match->getDire()->getTeamName()->getValue());
+    }
+
+    public function test_toEntityWrapsDomainErrorIntoMappingException()
+    {
+        try {
+            $this->mapFixture(static function (array $data): array {
+                foreach ($data['players'] as &$player) {
+                    $player['lane'] = 1;
+                }
+
+                return $data;
+            });
+            $this->fail('MappingException expected');
+        } catch (MappingException $e) {
+            $this->assertInstanceOf(DomainException::class, $e->getPrevious());
+        }
+    }
+
+    public function test_toEntityWrapsUnexpectedFieldTypeIntoMappingException()
+    {
+        try {
+            $this->mapFixture(static function (array $data): array {
+                $data['players'][0]['account_id'] = null;
+
+                return $data;
+            });
+            $this->fail('MappingException expected');
+        } catch (MappingException $e) {
+            $this->assertInstanceOf(TypeError::class, $e->getPrevious());
+        }
     }
 
     #[DataProvider('jungleLaneProvider')]
