@@ -413,14 +413,4 @@ class MatchOpenDotaMapper extends AbstractMapper
         }
         return $count;
     }
-
-    /**
-     * @deprecated
-     * @param array $data
-     * @return array
-     */
-    public function toCollection(array $data): array
-    {
-        return [];
-    }
 }

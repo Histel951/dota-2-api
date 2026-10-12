@@ -82,3 +82,6 @@ rector.php
 /phpstan.neon
 /phpstan.neon.dist
 .tmp
+# Local scratch files
+/test.php
+/promt.md
