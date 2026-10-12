@@ -18,7 +18,8 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 /**
- * Реализация ProviderFactory и фабрика 'dota2_api.http_client' выбираются в Dota2ApiExtension по source
+ * Реализация ProviderFactory, фабрика 'dota2_api.http_client' и параметры
+ * dota2_api.base_url / dota2_api.api_key задаются в Dota2ApiExtension по source
  */
 return static function (ContainerConfigurator $configurator): void {
 
@@ -35,6 +36,7 @@ return static function (ContainerConfigurator $configurator): void {
             '$timeout' => param('dota2_api.timeout'),
             '$apiSource' => param('dota2_api.source'),
             '$apiKey' => param('dota2_api.api_key'),
+            '$maxRetries' => param('dota2_api.max_retries'),
         ]);
 
     // собственный клиент бандла — глобальный http_client приложения не подменяется

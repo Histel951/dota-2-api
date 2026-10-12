@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\Provider;
+namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
 use DateTimeImmutable;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
@@ -12,11 +12,11 @@ use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
 use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Mapper\Team\TeamPlayerOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaTeamProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\DependencyInjection\Loader\Configurator\Traits\PropertyTrait;
 

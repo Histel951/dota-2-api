@@ -5,8 +5,8 @@ namespace Histel951\Dota2Api\Tests\Unit\DependencyInjection;
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
 use Histel951\Dota2Api\DependencyInjection\Dota2ApiExtension;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaMatchProvider;
-use Histel951\Dota2Api\Infrastructure\Provider\OpenDotaTeamProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaTeamProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -17,13 +17,41 @@ class Dota2ApiExtensionTest extends TestCase
 {
     public function test_clientIsBuiltFromContainer()
     {
-        $container = $this->createContainer([['api_key' => 'secret', 'timeout' => 60]]);
+        $container = $this->createContainer([['opendota' => ['api_key' => 'secret'], 'timeout' => 60]]);
         $container->compile();
 
         $client = $container->get(Dota2ApiClient::class);
 
         $this->assertInstanceOf(OpenDotaMatchProvider::class, $client->matches());
         $this->assertInstanceOf(OpenDotaTeamProvider::class, $client->teams());
+        $this->assertSame('secret', $container->getParameter('dota2_api.api_key'));
+        $this->assertSame('https://api.opendota.com/api/', $container->getParameter('dota2_api.base_url'));
+        $this->assertSame(60, $container->getParameter('dota2_api.timeout'));
+        $this->assertSame(3, $container->getParameter('dota2_api.max_retries'));
+    }
+
+    public function test_legacyRootOptionsAreStillSupported()
+    {
+        // конфиг в старом формате, как в dota2-analytical-service
+        $container = $this->createContainer([[
+            'base_url' => 'https://api.opendota.com/api/v2/',
+            'api_key' => 'legacy',
+            'timeout' => 30,
+            'source' => 'opendota',
+        ]]);
+        $container->compile();
+
+        $this->assertSame('https://api.opendota.com/api/v2/', $container->getParameter('dota2_api.base_url'));
+        $this->assertSame('legacy', $container->getParameter('dota2_api.api_key'));
+        $this->assertInstanceOf(OpenDotaMatchProvider::class, $container->get(Dota2ApiClient::class)->matches());
+    }
+
+    public function test_legacyNullApiKeyFallsBackToOpenDotaSection()
+    {
+        $container = $this->createContainer([['api_key' => null, 'opendota' => ['api_key' => 'secret']]]);
+        $container->compile();
+
+        $this->assertSame('secret', $container->getParameter('dota2_api.api_key'));
     }
 
     public function test_applicationHttpClientIsNotReplaced()

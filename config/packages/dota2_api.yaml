@@ -1,4 +1,7 @@
 dota2_api:
-  api_key: '%env(OPENDOTA_API_KEY)%'
+  source: opendota          # opendota | stratz (stratz пока не реализован)
   timeout: 60
-  source: opendota
+  max_retries: 3            # повторы для 429/5xx и транспортных ошибок
+  opendota:
+    base_url: 'https://api.opendota.com/api/'
+    api_key: '%env(default::OPENDOTA_API_KEY)%'

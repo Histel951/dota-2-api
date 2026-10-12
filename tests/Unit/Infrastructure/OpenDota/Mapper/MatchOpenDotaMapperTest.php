@@ -1,7 +1,7 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\Mapper\Match;
+namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
 use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
@@ -11,8 +11,8 @@ use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\Match\MatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\Provider\Extractors\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TypeError;
