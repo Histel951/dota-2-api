@@ -344,37 +344,33 @@ class MatchOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * Определяет линию игрока, учитывая роуминг
+     * Определяет линию игрока со стороны radiant (как её ожидает RoleResolverInterface)
      *
-     * Для роумеров (lane=5) определяет линию по lane_role:
-     * - lane_role 1 (Carry) → SAFE
-     * - lane_role 2 (Mid) → MIDDLE
-     * - lane_role 3 (Offlane) → OFFLANE
-     * - lane_role 4 (Soft Support) → OFFLANE
-     * - lane_role 5 (Hard Support) → SAFE
+     * OpenDota отдаёт:
+     * - lane: абсолютная позиция на карте — 1 bot, 2 mid, 3 top, 4 лес radiant, 5 лес dire
+     * - lane_role: линия относительно команды игрока — 1 safe, 2 mid, 3 offlane, 4 лес
+     *
+     * Bot/mid/top совпадают с Lane::SAFE/MIDDLE/OFFLANE со стороны radiant и берутся как есть.
+     * Для леса линия восстанавливается по lane_role с переводом в сторону radiant.
      *
      * @param array $playerData Данные игрока от OpenDota
      * @return Lane Линия игрока
      */
     private function resolveLane(array $playerData): Lane
     {
-        $lane = $playerData['lane'] ?? 1;
-        $laneRole = $playerData['lane_role'] ?? null;
-        $isRoaming = $playerData['is_roaming'] ?? false;
+        $lane = Lane::tryFrom($playerData['lane'] ?? 0);
 
-        if ($lane !== 5 && Lane::tryFrom($lane) !== null) {
-            return Lane::from($lane);
+        if (null !== $lane) {
+            return $lane;
         }
 
-        if ($isRoaming && $laneRole !== null) {
-            return match ($laneRole) {
-                2 => Lane::MIDDLE,
-                3, 4 => Lane::OFFLANE,
-                default => Lane::SAFE,
-            };
-        }
+        $isRadiant = (bool)$playerData['isRadiant'];
 
-        return Lane::SAFE;
+        return match ($playerData['lane_role'] ?? null) {
+            2 => Lane::MIDDLE,
+            3 => $isRadiant ? Lane::OFFLANE : Lane::SAFE,
+            default => $isRadiant ? Lane::SAFE : Lane::OFFLANE,
+        };
     }
 
     /**
