@@ -3,22 +3,23 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Infrastructure\Http;
 
-use Exception;
-use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpStatusCode;
-use RuntimeException;
-use Symfony\Component\HttpClient\Exception\ClientException;
+use Symfony\Component\HttpClient\RetryableHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 class OpenDotaHttpClient implements HttpClientInterface
 {
+    private HttpClientInterface $httpClient;
     private array $options;
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
+        HttpClientInterface $httpClient,
         private readonly ConfigurationHttpClient $cfg,
     ) {
+        // ретраи 429/5xx и транспортных ошибок с экспоненциальной задержкой и учётом Retry-After
+        $this->httpClient = new RetryableHttpClient($httpClient, maxRetries: $cfg->getMaxRetries());
+
         $this->options = array_merge([
             'base_uri' => $cfg->getBaseUrl(),
             'timeout' => $cfg->getTimeout(),
@@ -27,7 +28,6 @@ class OpenDotaHttpClient implements HttpClientInterface
 
     /**
      * {@inheritdoc}
-     * @throws RuntimeException|ClientException|Exception
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
@@ -38,37 +38,7 @@ class OpenDotaHttpClient implements HttpClientInterface
             );
         }
 
-        $finalOptions = array_merge_recursive($this->options, $options);
-
-        $attempts = 0;
-        $lastException = null;
-
-        while ($attempts < $this->cfg->getMaxRetries()) {
-            try {
-                return $this->httpClient->request($method, $url, $finalOptions);
-            } catch (ClientException $e) {
-                $lastException = $e;
-                $statusCode = $e->getCode();
-
-                if (
-                    $statusCode !== HttpStatusCode::TOO_MANY_REQUESTS->value
-                    && $statusCode >= HttpStatusCode::NOT_FOUND->value
-                    && $statusCode < HttpStatusCode::INTERNAL_SERVER_ERROR->value
-                ) {
-                    throw $e;
-                }
-
-                $attempts++;
-
-                if ($attempts >= $this->cfg->getMaxRetries()) {
-                    throw $e;
-                }
-
-                sleep(2 ** $attempts);
-            }
-        }
-
-        throw $lastException ?? new RuntimeException('Request failed');
+        return $this->httpClient->request($method, $url, array_merge_recursive($this->options, $options));
     }
 
     /**

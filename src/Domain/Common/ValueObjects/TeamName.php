@@ -16,10 +16,6 @@ final readonly class TeamName
         ?string $value
     )
     {
-        if (null === $value) {
-            return null;
-        }
-
         $this->value = $value;
     }
 
