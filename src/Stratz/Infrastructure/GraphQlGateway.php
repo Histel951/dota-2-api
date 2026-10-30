@@ -61,6 +61,25 @@ final readonly class GraphQlGateway
      * @throws SourceRequestException статус не 200, транспорт, ответ без data с errors
      * @throws SourceDataException не JSON, нет ни data, ни errors, data не объект
      */
+    /**
+     * Тексты GraphQL-ошибок из тела не-200 ответа (STRATZ отдаёт ошибки запроса со статусом 400)
+     */
+    private function errorDetails(ResponseInterface $response): string
+    {
+        try {
+            $body = json_decode($response->getContent(false), true);
+        } catch (ExceptionInterface) {
+            return '';
+        }
+
+        $messages = array_filter(array_map(
+            static fn (mixed $error): ?string => is_array($error) && is_string($error['message'] ?? null) ? $error['message'] : null,
+            is_array($body) && is_array($body['errors'] ?? null) ? $body['errors'] : [],
+        ));
+
+        return [] === $messages ? '' : ': ' . implode('; ', $messages);
+    }
+
     public function decode(ResponseInterface $response): GraphQlResult
     {
         try {
@@ -70,7 +89,9 @@ final readonly class GraphQlGateway
         }
 
         if ($statusCode !== HttpStatusCode::OK->value) {
-            throw new SourceRequestException(sprintf('API returned unexpected status code %d', $statusCode));
+            throw new SourceRequestException(
+                sprintf('API returned unexpected status code %d', $statusCode) . $this->errorDetails($response),
+            );
         }
 
         try {
