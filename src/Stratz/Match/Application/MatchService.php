@@ -4,6 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Stratz\Match\Application;
 
 use Generator;
+use Histel951\Dota2Api\Exception\Dota2ApiExceptionInterface;
 use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Exception\SourceRequestException;
 use Histel951\Dota2Api\SharedKernel\MatchId;
@@ -49,6 +50,7 @@ final readonly class MatchService
     public function getMatches(array $ids, int $concurrency = 5, bool $withPlaybackData = false): Generator
     {
         foreach ($this->source->getMatches($ids, $concurrency, $withPlaybackData) as $id => $outcome) {
+            /** @var MatchDetail|Dota2ApiExceptionInterface|null $outcome */
             yield $outcome instanceof MatchDetail
                 ? new MatchFetchResult($id, $outcome, null)
                 : new MatchFetchResult($id, null, $outcome);
