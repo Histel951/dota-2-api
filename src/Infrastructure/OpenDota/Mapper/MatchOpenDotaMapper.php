@@ -266,7 +266,7 @@ class MatchOpenDotaMapper extends AbstractMapper
                 deaths: $playerData['deaths'],
                 assists: $playerData['assists']
             ),
-            role: new Role(PlayerRole::UNKNOWN),
+            role: new Role($this->resolveInitialRole($playerData)),
             objectives: new ObjectivesStats(
                 roshanKills: new RoshanKills($playerData['roshan_kills']),
                 towerKills: new TowerKills($playerData['tower_kills']),
@@ -389,6 +389,25 @@ class MatchOpenDotaMapper extends AbstractMapper
             3 => $isRadiant ? Lane::OFFLANE : Lane::SAFE,
             default => $isRadiant ? Lane::SAFE : Lane::OFFLANE,
         };
+    }
+
+    /**
+     * Начальная роль игрока из position_est OpenDota.
+     *
+     * Значения position_est 1-5 совпадают с PlayerRole (carry, mid, offlane, support, hard support).
+     * Всё остальное (null, не int, 0, 6 и выше) — UNKNOWN.
+     *
+     * @param array $playerData Данные игрока от OpenDota
+     */
+    private function resolveInitialRole(array $playerData): PlayerRole
+    {
+        $position = $playerData['position_est'] ?? null;
+
+        if (!is_int($position) || $position < 1 || $position > 5) {
+            return PlayerRole::UNKNOWN;
+        }
+
+        return PlayerRole::tryFrom($position) ?? PlayerRole::UNKNOWN;
     }
 
     /**

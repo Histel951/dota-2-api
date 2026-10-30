@@ -35,9 +35,18 @@ MatchPlayerPerformance (immutable, роль меняется только чер
 - `TeamId` и `TeamName` допускают `null` (матч без команды): `getValue()` возвращает `?string`.
 - Счётчики статистики наследуют `Domain\Common\ValueObjects\Counter` (int ≥ 0, `getValue()`). Новый счётчик — это пустой класс `final readonly class X extends Counter {}`.
 
-## Роли: `ProSceneRoleResolver`
+## Роли
 
-OpenDota не отдаёт позицию 1–5 для про-матчей, поэтому роль выводится по линии, GPM и варданию. Резолвер работает для каждой стороны отдельно и требует ровно 5 игроков.
+`RoleResolverInterface` → `PrefilledRoleResolver(inner: ProSceneRoleResolver)`, для каждой стороны отдельно.
+
+1. Маппер ставит начальную роль из `players[].position_est` OpenDota: значения 1–5 совпадают с `PlayerRole`, всё остальное (null, нет ключа, вне 1–5, не int) → UNKNOWN. Ключ есть только у распарсенных матчей.
+2. `PrefilledRoleResolver`: если у стороны ровно 5 игроков и роли — полный набор 1–5 без повторов и UNKNOWN, роли остаются как есть. Иначе **вся сторона** уходит в `ProSceneRoleResolver` (источники внутри команды не смешиваются).
+
+На 25 про-матчах (2026-10-30) `position_est` был валиден у 50 из 50 сторон и совпал с эвристикой у 244 из 250 игроков. Расхождения — перестановки SUPPORT ↔ HARD_SUPPORT и OFFLANE ↔ SUPPORT (эвристика отдаёт оффлейн по GPM, даже если игрок ставил сентри).
+
+### `ProSceneRoleResolver` (запасной вариант)
+
+Роль выводится по линии, GPM и варданию. Резолвер работает для каждой стороны отдельно и требует ровно 5 игроков.
 
 1. Для Dire линия нормализуется: SAFE ↔ OFFLANE.
 2. Mid:
