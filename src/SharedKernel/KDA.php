@@ -36,8 +36,11 @@ final readonly class KDA
         return $this->assists;
     }
 
+    /**
+     * (kills + assists) / deaths; без смертей делитель 1, как принято в Dota
+     */
     public function getCoefficient(): float
     {
-        return round($this->kills + $this->assists / $this->deaths, 2);
+        return round(($this->kills + $this->assists) / max(1, $this->deaths), 2);
     }
 }
