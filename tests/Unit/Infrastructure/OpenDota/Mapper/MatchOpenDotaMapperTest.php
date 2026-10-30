@@ -3,13 +3,13 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
-use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
 use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
-use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
+use Histel951\Dota2Api\Match\Domain\Player\Lane;
+use Histel951\Dota2Api\Match\Domain\Side\Side;
+use Histel951\Dota2Api\Match\Domain\MatchDetail;
+use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Player\MatchPlayerPerformance;
 use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;

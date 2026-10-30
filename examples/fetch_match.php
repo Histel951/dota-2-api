@@ -2,7 +2,7 @@
 
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
 use Histel951\Dota2Api\SharedKernel\MatchId;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
+use Histel951\Dota2Api\Match\Domain\Side\Side;
 use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Client\Config\ApiSource;
 use Symfony\Component\HttpClient\HttpClient;
