@@ -51,13 +51,21 @@ class TeamOpenDotaMapper extends AbstractMapper
             return new Team(
                 id: new TeamId($data['team_id']),
                 name: new TeamName($optional['name']),
-                tag: new TeamTag($data['tag']),
+                tag: $this->createTag($data['tag']),
                 stats: $stats,
                 lastMatchTime: $this->createDateTime($data['last_match_time']),
             );
         } catch (Throwable $e) {
             throw new MappingException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Пустой tag у части команд /teams (около 12% списка) означает «тега нет», а не ошибку данных
+     */
+    private function createTag(string $tag): ?TeamTag
+    {
+        return trim($tag) === '' ? null : new TeamTag($tag);
     }
 
     /**
