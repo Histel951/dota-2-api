@@ -1,21 +1,19 @@
 <?php
 
+use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
 use Histel951\Dota2Api\SharedKernel\MatchId;
-use Histel951\Dota2Api\Match\Domain\Side\Side;
-use Histel951\Dota2Api\Client\Config\ClientConfig;
-use Histel951\Dota2Api\Client\Config\ApiSource;
+use Histel951\Dota2Api\SharedKernel\Side;
 use Symfony\Component\HttpClient\HttpClient;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$client = (new Dota2ApiClientBuilder(new ClientConfig(
-    baseUrl: 'https://api.opendota.com/api/',
-    apiSource: ApiSource::OPENDOTA,
-    timeout: 600
-), HttpClient::create()))->build();
+$client = (new Dota2ApiClientBuilder(
+    HttpClient::create(),
+    new ClientConfig(baseUrl: 'https://api.opendota.com/api/', timeout: 600),
+))->build();
 
-$matchesProvider = $client->matches();
+$matchesProvider = $client->openDota()->matches();
 $detail = $matchesProvider->getMatch(new MatchId(8794744726));
 
 $matchDetail = $detail->getMatchDetail();

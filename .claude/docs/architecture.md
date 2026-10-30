@@ -2,54 +2,60 @@
 
 ## Слои и контексты (`src/`)
 
-Код сгруппирован по контекстам (Match, Team, SharedKernel), внутри контекста — по понятию, а не по типу класса.
+Код сгруппирован по источникам данных (`OpenDota`, позже `Stratz`): у каждого свой bounded context со своими Match и Team. Общее лежит в `SharedKernel`. Внутри контекста — по понятию, а не по типу класса.
 
 ```
 Dota2ApiBundle.php            — класс бандла (пустой, вся настройка в DI Extension)
 DependencyInjection/          — Configuration (дерево конфига dota2_api) + Dota2ApiExtension
-Resources/config/services.php — регистрация сервисов
-Client/                       — публичная точка входа: Dota2ApiClient + Dota2ApiClientBuilder (без Symfony)
-  Config/                     — ClientConfig (base_url, source, api_key, timeout, max_retries, options), enum ApiSource
+Resources/config/             — services.php (Dota2ApiClient), opendota.php (граф OpenDota)
+Client/                       — публичная точка входа: Dota2ApiClient (openDota()) + Dota2ApiClientBuilder (без Symfony)
+  Config/                     — ClientConfig (base_url, api_key, timeout, max_retries, options) — общий для источников
 Exception/                    — публичные исключения: Dota2ApiExceptionInterface (маркер), SourceRequestException,
-                                SourceDataException, ClientConfigurationException
-SharedKernel/                 — то, что нужно обоим контекстам: MatchId, TeamId, TeamName, PlayerId, PlayerName,
-                                HeroId, Duration; Exception/ — DomainException (база доменных исключений) и их Invalid*
-Match/
-  Domain/                     — MatchDetail, MatchStartTime; Player/, Player/Stats/, Draft/, Side/, Region/
-    Role/                     — RoleResolverInterface, PrefilledRoleResolver, ProSceneRoleResolver
-    Exception/                — исключения контекста матча
-  Application/                — MatchService (роли + обёртка ошибок), MatchFetchResult
-  Port/                       — MatchSourceInterface (что умеет источник матчей)
-Team/
-  Domain/                     — Team, TeamTag, TeamStats, WinrateStats; History/, Roster/, Heroes/; Exception/
-  Port/                       — TeamSourceInterface
+                                SourceDataException
+SharedKernel/                 — общие VO, нужные нескольким контекстам: MatchId, TeamId, TeamName, TeamTag, PlayerId,
+                                PlayerName, HeroId, HeroName, Duration, MatchStartTime, Side, Counter, GPM, XPM, KDA,
+                                WinrateStats, Cluster, LeagueId, LeagueName; Draft/, Region/;
+                                Exception/ — DomainException (база доменных исключений) и общие Invalid*
 Infrastructure/               — общее для всех источников
-  Http/                       — ApiGateway (+ApiGatewayInterface), HttpMethod, HttpStatusCode
+  Http/                       — HttpMethod, HttpStatusCode
   Mapping/                    — AbstractMapper
-  SourceFactoryInterface.php  — фабрика адаптеров источника (createMatchSource / createTeamSource)
-  OpenDota/                   — всё, что специфично для OpenDota
-    OpenDotaHttpClientFactory — base_uri, timeout, api_key, RetryableHttpClient
-    OpenDotaSourceFactory     — реализация SourceFactoryInterface
+OpenDota/                     — источник OpenDota
+  OpenDotaClient.php          — matches(): MatchService, teams(): TeamSourceInterface
+  Match/
+    Domain/                   — MatchDetail; Player/, Player/Stats/, Side/ (MatchResult, TeamSide), Role/, Exception/
+    Application/             — MatchService (роли + обёртка ошибок), MatchFetchResult
+    Port/                     — MatchSourceInterface
+  Team/
+    Domain/                   — Team, TeamStats; History/, Roster/, Heroes/; Exception/
+    Port/                     — TeamSourceInterface
+  Infrastructure/             — ApiGateway (+ApiGatewayInterface), OpenDotaHttpClientFactory (DEFAULT_BASE_URL),
+                                OpenDotaSourceFactory
     Match/                    — OpenDotaMatchSource, MatchExtractor, MatchMapper, PlayerMapper, DraftMapper, LaneNormalizer
     Team/                     — OpenDotaTeamSource, TeamMapper, TeamMatchMapper, TeamPlayerMapper, TeamHeroMapper
 ```
 
+Контексты источников независимы: класс из `OpenDota\…` не знает про `Stratz\…` и наоборот; общие понятия живут только в `SharedKernel`.
+
 ## Правила зависимостей
+
+S — источник (`OpenDota`, `Stratz`), C — контекст (`Match`, `Team`).
 
 - `SharedKernel` ни от чего не зависит (вне себя — только `Exception\Dota2ApiExceptionInterface`).
 - `Exception` ни от чего не зависит.
-- `Match/Domain`, `Team/Domain` → `SharedKernel`. **Match и Team друг от друга не зависят.**
-- `<Context>/Port` → свой Domain, `SharedKernel`, `Exception`.
-- `Match/Application` → `Match/Domain`, `Match/Port`, `SharedKernel`, `Exception`.
-- `Infrastructure` → всё, кроме `Match/Application`, `Client` (кроме `Client/Config`), `DependencyInjection`, `Resources`, `Dota2ApiBundle`.
-- `Client`, `Client/Config`, `DependencyInjection`, `Resources`, `Dota2ApiBundle` — composition root, без ограничений. От Infrastructure зависят только они.
+- Общий `Infrastructure` → `SharedKernel`, `Exception`. От источников и `Client` не зависит.
+- `S\C\Domain` → `SharedKernel`. **Match и Team, а также OpenDota и Stratz друг от друга не зависят.**
+- `S\C\Port` → `S\C\Domain`, `SharedKernel`, `Exception`.
+- `S\C\Application` → `S\C\Domain`, `S\C\Port`, `SharedKernel`, `Exception`.
+- `S\Infrastructure` → `S\Match\Domain`, `S\Match\Port`, `S\Team\Domain`, `S\Team\Port`, `SharedKernel`, `Exception`, общий `Infrastructure`, `Client\Config`. Не зависит от своего `Application` и от `Client`.
+- Клиент источника (`OpenDota\OpenDotaClient`) → `S\Match\Application`, `S\Match\Port`, `S\Team\Application`, `S\Team\Port`.
+- `Client`, `Client/Config`, `DependencyInjection`, `Resources`, `Dota2ApiBundle` — composition root, без ограничений. От `S\Infrastructure` зависят только они.
 
-Правила проверяет `tests/Unit/Architecture/LayerDependenciesTest.php`: парсит все файлы `src/` (`nikic/php-parser`, dev), собирает все ссылки на классы бандла — `use` и полные имена без `use` — и сверяет слой файла со слоем цели по белому списку. Файл или цель в неизвестном слое — тоже нарушение: новый верхнеуровневый namespace нужно добавить в `LAYERS` теста. Запуск: `php vendor/bin/phpunit tests/Unit/Architecture`.
+Правила проверяет `tests/Unit/Architecture/LayerDependenciesTest.php`: парсит все файлы `src/` (`nikic/php-parser`, dev), собирает все ссылки на классы бандла — `use` и полные имена без `use` — и сверяет слой файла со слоем цели по белому списку. Слои для S ∈ {OpenDota, Stratz} × C ∈ {Match, Team} генерируются статически (`layers()`, `allowedTargets()`). Файл или цель в неизвестном слое — тоже нарушение: новый верхнеуровневый namespace нужно добавить в слои теста. Запуск: `php vendor/bin/phpunit tests/Unit/Architecture`.
 
 ## Путь запроса
 
 ```
-Dota2ApiClient::matches() → MatchService::getMatch()/getMatches()
+Dota2ApiClient::openDota()->matches() → MatchService::getMatch()/getMatches()
   → MatchSourceInterface = OpenDotaMatchSource   (endpoint "matches/{id}")
     → ApiGateway::request()     (ленивый: не ждёт заголовков, статус не проверяет)
       → RetryableHttpClient     (429/5xx/транспорт: до max_retries повторов, задержка 1с×2ⁿ, учитывает Retry-After)
@@ -63,7 +69,7 @@ Dota2ApiClient::matches() → MatchService::getMatch()/getMatches()
   → MatchDetail::withResolvedRoles(RoleResolverInterface)  (в MatchService, для каждой стороны отдельно)
   ← MatchFetchResult
 
-Dota2ApiClient::teams() = TeamSourceInterface = OpenDotaTeamSource   (без Application-слоя)
+Dota2ApiClient::openDota()->teams() = TeamSourceInterface = OpenDotaTeamSource   (без Application-слоя)
   → ApiGateway::get()           ("teams", "teams/{id}", "teams/{id}/matches|players|heroes")
   → Team*Mapper::toEntity()/toCollection()
 ```
@@ -87,11 +93,10 @@ Dota2ApiExceptionInterface (маркер, extends \Throwable) — его реа�
 ├─ Exception\SourceRequestException       — транспорт, 404 ("Object not found"), иной не-200
 ├─ Exception\SourceDataException          — тело не JSON-массив (previous — \JsonException), данные не маппятся
 │                                            (previous — DomainException / TypeError / ValueError)
-├─ Exception\ClientConfigurationException — Dota2ApiClientBuilder::build() с source = stratz
 └─ SharedKernel\Exception\DomainException — база всех Invalid*Exception и MatchPlayersException
 ```
 
-Все — наследники `\Exception`. Порты объявляют `@throws SourceRequestException|SourceDataException`. `source: stratz` в DI — `InvalidConfigurationException` Symfony (не исключение бандла).
+Все — наследники `\Exception`. Порты объявляют `@throws SourceRequestException|SourceDataException`.
 
 `MatchFetchResult::getError(): ?Dota2ApiExceptionInterface`:
 
@@ -103,23 +108,26 @@ Dota2ApiExceptionInterface (маркер, extends \Throwable) — его реа�
 
 ## DI
 
-- `dota2_api.http_client` — **собственный приватный клиент бандла**: `HttpClient::create()` → `OpenDotaHttpClientFactory::create()` (фабрика ставится в `Dota2ApiExtension` по `source`). Глобальный `HttpClientInterface` / `http_client` приложения бандл не трогает.
-- `ClientConfig` из параметров `dota2_api.*`.
-- `ApiGateway` (+алиас `ApiGatewayInterface`) поверх `dota2_api.http_client`.
-- `SourceFactoryInterface` → `OpenDotaSourceFactory` (autowire в `Dota2ApiExtension::loadOpenDota()`). `MatchSourceInterface` и `TeamSourceInterface` — сервисы-фабрики от него (`createMatchSource` / `createTeamSource`).
-- `RoleResolverInterface` → `PrefilledRoleResolver` с inline `ProSceneRoleResolver` в `$inner`.
-- `MatchService` — autowire (`MatchSourceInterface` + `RoleResolverInterface`).
-- `Dota2ApiClient` — единственный публичный сервис, autowire (`MatchService` + `TeamSourceInterface`).
+`Dota2ApiExtension::load()` без ветвления: обрабатывает конфиг, ставит параметры и грузит `services.php` + `opendota.php`. Всё, кроме `Dota2ApiClient`, приватное.
 
-`Dota2ApiClientBuilder` собирает тот же граф руками для использования без Symfony: `OpenDotaHttpClientFactory` → `ApiGateway` → `OpenDotaSourceFactory`; `MatchService(createMatchSource(), PrefilledRoleResolver(ProSceneRoleResolver))`; `teams` — `createTeamSource()`. `source = stratz` → `ClientConfigurationException`.
+- `services.php` — `Dota2ApiClient` (публичный, autowire `OpenDotaClient`).
+- `opendota.php`:
+  - `dota2_api.opendota.config` — `ClientConfig` из параметров `dota2_api.opendota.base_url|api_key`, `dota2_api.timeout|max_retries`.
+  - `dota2_api.opendota.http_client` — **собственный приватный клиент бандла**: `HttpClient::create()` → `OpenDotaHttpClientFactory::create()`. Глобальный `HttpClientInterface` / `http_client` приложения бандл не трогает.
+  - `ApiGateway` (+алиас `ApiGatewayInterface`) поверх `dota2_api.opendota.http_client`.
+  - `OpenDotaSourceFactory` (без интерфейса); `OpenDota\Match\Port\MatchSourceInterface` и `OpenDota\Team\Port\TeamSourceInterface` — сервисы-фабрики от него (`createMatchSource` / `createTeamSource`).
+  - `RoleResolverInterface` → `PrefilledRoleResolver` с inline `ProSceneRoleResolver` в `$inner`.
+  - `MatchService` — autowire (`MatchSourceInterface` + `RoleResolverInterface`); `OpenDotaClient` — autowire (`MatchService` + `TeamSourceInterface`).
+
+`Dota2ApiClientBuilder(HttpClientInterface $client, ?ClientConfig $openDota = null)` собирает тот же граф руками для использования без Symfony: `OpenDotaHttpClientFactory` → `ApiGateway` → `OpenDotaSourceFactory`; `OpenDotaClient(MatchService(createMatchSource(), PrefilledRoleResolver(ProSceneRoleResolver)), createTeamSource())`. Без конфига — `ClientConfig(OpenDotaHttpClientFactory::DEFAULT_BASE_URL)`.
 
 ```php
 $client = (new Dota2ApiClientBuilder(
-    new ClientConfig(baseUrl: 'https://api.opendota.com/api/', apiSource: ApiSource::OPENDOTA, timeout: 600),
     HttpClient::create(),
+    new ClientConfig(baseUrl: 'https://api.opendota.com/api/', timeout: 600),
 ))->build();
 
-$result = $client->matches()->getMatch(new MatchId(8794744726));
+$result = $client->openDota()->matches()->getMatch(new MatchId(8794744726));
 $match  = $result->getMatchDetail(); // ?MatchDetail, ошибка — в $result->getError()
 ```
 
@@ -127,16 +135,14 @@ $match  = $result->getMatchDetail(); // ?MatchDetail, ошибка — в $resul
 
 ```yaml
 dota2_api:
-  source: opendota          # enum: opendota | stratz (stratz → ошибка сборки контейнера)
   timeout: 30
   max_retries: 3            # min 0
   opendota:
-    base_url: 'https://api.opendota.com/api/'
+    base_url: 'https://api.opendota.com/api/'    # OpenDotaHttpClientFactory::DEFAULT_BASE_URL
     api_key: '%env(default::OPENDOTA_API_KEY)%'   # default null; уходит query-параметром api_key
-  # base_url / api_key в корне — deprecated-алиасы opendota.*, корневое значение важнее (null → берётся opendota.*)
 ```
 
-Параметры контейнера: `dota2_api.base_url`, `dota2_api.api_key` (для активного источника), `dota2_api.timeout`, `dota2_api.max_retries`, `dota2_api.source` (enum `ApiSource`).
+Корневые `source`, `base_url`, `api_key` убраны: `InvalidConfigurationException` («Unrecognized option»). Параметры контейнера: `dota2_api.timeout`, `dota2_api.max_retries`, `dota2_api.opendota.base_url`, `dota2_api.opendota.api_key`.
 
 ## Новый источник (STRATZ)
 
