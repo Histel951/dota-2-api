@@ -3,79 +3,78 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
-use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
+use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
 use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidCounterException;
+use Histel951\Dota2Api\Match\Domain\Exception\InvalidCounterException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidDurationException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidGPMException;
+use Histel951\Dota2Api\Match\Domain\Exception\InvalidGPMException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidHeroIdException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidKDAException;
+use Histel951\Dota2Api\Match\Domain\Exception\InvalidKDAException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidMatchIdException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidPlayerIdException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidPlayerNameException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidTeamIdException;
 use Histel951\Dota2Api\SharedKernel\Exception\InvalidTeamNameException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidXPMException;
+use Histel951\Dota2Api\Match\Domain\Exception\InvalidXPMException;
 use Histel951\Dota2Api\SharedKernel\Duration;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\GoldSpent;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\GPM;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\GoldSpent;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\GPM;
 use Histel951\Dota2Api\SharedKernel\HeroId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\KDA;
 use Histel951\Dota2Api\SharedKernel\MatchId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\NetWorth;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\NetWorth;
 use Histel951\Dota2Api\SharedKernel\PlayerId;
 use Histel951\Dota2Api\SharedKernel\PlayerName;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\Region;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
+use Histel951\Dota2Api\Match\Domain\Region\Region;
+use Histel951\Dota2Api\Match\Domain\Player\Role;
 use Histel951\Dota2Api\SharedKernel\TeamId;
 use Histel951\Dota2Api\SharedKernel\TeamName;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalGold;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalXP;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
-use Histel951\Dota2Api\Domain\Entities\Match\Exceptions\InvalidDraftOrderException;
-use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\AncientCreeps;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\BuybackCount;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CampsStacked;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CourierKills;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\CreepsStats;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DamageStats;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Denies;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftDecision;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\DraftOrder;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\HeroDamage;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\HeroHealing;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Identity;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\LaneCreeps;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\LastHits;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerEconomy;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchResult;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchStartTime;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\NeutralCreeps;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObjectivesStats;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversDestroyed;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\ObserversPlaced;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Watchers;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RoshanKills;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SmokeUses;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\RunePickups;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryDestroyed;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\SentryPlaced;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Stuns;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamfightParticipation;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TeamSide;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TormentorKills;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerDamage;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
-use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
-use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TotalGold;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TotalXP;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\XPM;
+use Histel951\Dota2Api\Match\Domain\Player\Lane;
+use Histel951\Dota2Api\Match\Domain\Side\Side;
+use Histel951\Dota2Api\Match\Domain\Exception\InvalidDraftOrderException;
+use Histel951\Dota2Api\Match\Domain\MatchDetail;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\AncientCreeps;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\BuybackCount;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\CampsStacked;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\CourierKills;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\CreepsStats;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\DamageStats;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\Denies;
+use Histel951\Dota2Api\Match\Domain\Draft\Draft;
+use Histel951\Dota2Api\Match\Domain\Draft\DraftDecision;
+use Histel951\Dota2Api\Match\Domain\Draft\DraftOrder;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\HeroDamage;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\HeroHealing;
+use Histel951\Dota2Api\Match\Domain\Player\Identity;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\LaneCreeps;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\LastHits;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\MatchPlayerEconomy;
+use Histel951\Dota2Api\Match\Domain\Player\MatchPlayerLane;
+use Histel951\Dota2Api\Match\Domain\Player\MatchPlayerPerformance;
+use Histel951\Dota2Api\Match\Domain\Player\MatchPlayers;
+use Histel951\Dota2Api\Match\Domain\MatchStartTime;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\NeutralCreeps;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\ObjectivesStats;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\ObserversDestroyed;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\ObserversPlaced;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\Watchers;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\RoshanKills;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\SmokeUses;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\RunePickups;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\SentryDestroyed;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\SentryPlaced;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\Stuns;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TeamfightParticipation;
+use Histel951\Dota2Api\Match\Domain\Side\TeamSide;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TormentorKills;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TowerDamage;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\TowerKills;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\UtilityStats;
+use Histel951\Dota2Api\Match\Domain\Player\Stats\WardingStats;
+use Histel951\Dota2Api\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use TypeError;
@@ -181,14 +180,6 @@ class MatchOpenDotaMapper extends AbstractMapper
             }
         }
 
-        $radiantPlayers = $this->roleResolver->resolve($radiantPlayers);
-        $direPlayers = $this->roleResolver->resolve($direPlayers, false);
-
-        $players = [
-            ...$radiantPlayers,
-            ...$direPlayers,
-        ];
-
         $radiantTeam = $this->createTeamSide(
             teamId: $optional['radiant_team_id'],
             teamName: $optional['radiant_name'],
@@ -209,35 +200,20 @@ class MatchOpenDotaMapper extends AbstractMapper
             side: Side::DIRE,
         );
 
-        $winner = null;
-        $loser = null;
-        foreach ([$radiantTeam, $direTeam] as $team) {
-            if ($team->isWon()) {
-                $winner = $team;
-            } else {
-                $loser = $team;
-            }
-        }
-
-        $matchResult = new MatchResult(
-            winner: $winner,
-            loser: $loser,
-        );
-
-        return new MatchDetail(
+        $detail = new MatchDetail(
             id: new MatchId($data['match_id']),
             duration: Duration::fromSeconds($data['duration']),
-            result: $matchResult,
             radiant: $radiantTeam,
             dire: $direTeam,
             draft: new Draft(
                 picks: $allPicks,
                 bans: $allBans,
             ),
-            players: new MatchPlayers($players),
             startTime: MatchStartTime::fromTimestamp($data['start_time']),
             region: Region::fromId($optional['region']),
         );
+
+        return $detail->withResolvedRoles($this->roleResolver);
     }
 
     /**

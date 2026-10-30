@@ -2,11 +2,11 @@
 declare(strict_types=1);
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Role\PrefilledRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
-use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
+use Histel951\Dota2Api\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;

@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
 use Histel951\Dota2Api\SharedKernel\MatchId;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Client\Config\ApiSource;
