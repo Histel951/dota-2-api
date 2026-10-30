@@ -5,7 +5,7 @@ namespace Histel951\Dota2Api\Match\Domain\Region;
 
 use Histel951\Dota2Api\Match\Domain\Exception\InvalidRegionException;
 
-final class Region
+final readonly class Region
 {
     public function __construct(
         private int $id,

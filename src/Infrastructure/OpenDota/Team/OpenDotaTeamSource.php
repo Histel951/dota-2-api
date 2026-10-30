@@ -12,12 +12,8 @@ use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
 use Histel951\Dota2Api\Exception\SourceRequestException;
 use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamPlayerMapper;
 
-class OpenDotaTeamSource implements TeamSourceInterface
+final class OpenDotaTeamSource implements TeamSourceInterface
 {
     public function __construct(
         private readonly ApiGatewayInterface      $gateway,
