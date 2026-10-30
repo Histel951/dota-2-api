@@ -13,7 +13,7 @@ use Histel951\Dota2Api\SharedKernel\Duration;
 use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\SharedKernel\MatchId;
 
-final class MatchDetail
+final readonly class MatchDetail
 {
     private readonly MatchResult $result;
 

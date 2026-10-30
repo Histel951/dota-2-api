@@ -5,7 +5,7 @@ namespace Histel951\Dota2Api\Team\Domain\History;
 
 use Histel951\Dota2Api\Team\Domain\Exception\InvalidLeagueNameException;
 
-class LeagueName
+final readonly class LeagueName
 {
     private string $value;
 

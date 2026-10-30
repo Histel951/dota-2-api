@@ -7,7 +7,7 @@ use DateTimeImmutable;
 use Histel951\Dota2Api\SharedKernel\TeamId;
 use Histel951\Dota2Api\SharedKernel\TeamName;
 
-final class Team
+final readonly class Team
 {
     public function __construct(
         private readonly TeamId            $id,
