@@ -1,9 +1,9 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Support\OpenDota;
+namespace Histel951\Dota2Api\Tests\Unit\Support;
 
-use Histel951\Dota2Api\Tests\Support\OpenDota\KeyDiff;
+use Histel951\Dota2Api\Tests\Support\KeyDiff;
 use PHPUnit\Framework\TestCase;
 
 final class KeyDiffTest extends TestCase

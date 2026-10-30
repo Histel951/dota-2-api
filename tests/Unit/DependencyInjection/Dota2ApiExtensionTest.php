@@ -3,7 +3,16 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Unit\DependencyInjection;
 
+use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Client\Dota2ApiClient;
+use Histel951\Dota2Api\Stratz\Infrastructure\GraphQlGateway;
+use Histel951\Dota2Api\Stratz\Infrastructure\Match\StratzMatchSource;
+use Histel951\Dota2Api\Stratz\Infrastructure\StratzSourceFactory;
+use Histel951\Dota2Api\Stratz\Infrastructure\Team\StratzTeamSource;
+use Histel951\Dota2Api\Stratz\Match\Application\MatchService as StratzMatchService;
+use Histel951\Dota2Api\Stratz\Match\Port\MatchSourceInterface as StratzMatchSourceInterface;
+use Histel951\Dota2Api\Stratz\StratzClient;
+use Histel951\Dota2Api\Stratz\Team\Port\TeamSourceInterface as StratzTeamSourceInterface;
 use Histel951\Dota2Api\DependencyInjection\Dota2ApiExtension;
 use Histel951\Dota2Api\OpenDota\Infrastructure\Match\OpenDotaMatchSource;
 use Histel951\Dota2Api\OpenDota\Infrastructure\Team\OpenDotaTeamSource;
@@ -131,6 +140,110 @@ class Dota2ApiExtensionTest extends TestCase
 
         $this->assertSame('https://example.test/gql', $container->getParameter('dota2_api.stratz.base_url'));
         $this->assertSame('tok', $container->getParameter('dota2_api.stratz.token'));
+    }
+
+    public function test_stratzClientIsBuiltFromContainer()
+    {
+        $container = $this->createContainer([[]]);
+        $container->compile();
+
+        $stratz = $container->get(Dota2ApiClient::class)->stratz();
+
+        $this->assertInstanceOf(StratzMatchService::class, $stratz->matches());
+        $this->assertInstanceOf(StratzTeamSource::class, $stratz->teams());
+    }
+
+    public function test_bothSourcesAreAvailableTogether()
+    {
+        $container = $this->createContainer([[]]);
+        $container->compile();
+
+        $client = $container->get(Dota2ApiClient::class);
+
+        $this->assertInstanceOf(MatchService::class, $client->openDota()->matches());
+        $this->assertInstanceOf(OpenDotaTeamSource::class, $client->openDota()->teams());
+        $this->assertInstanceOf(StratzMatchService::class, $client->stratz()->matches());
+        $this->assertInstanceOf(StratzTeamSource::class, $client->stratz()->teams());
+        $this->assertNotSame($client->openDota()->matches(), $client->stratz()->matches());
+    }
+
+    public function test_stratzServicesArePrivateAndOnlyClientIsPublic()
+    {
+        $container = $this->createContainer([[]]);
+        $ids = [
+            StratzClient::class,
+            StratzMatchService::class,
+            StratzMatchSourceInterface::class,
+            StratzTeamSourceInterface::class,
+            StratzSourceFactory::class,
+            GraphQlGateway::class,
+            'dota2_api.stratz.config',
+            'dota2_api.stratz.http_client',
+        ];
+
+        foreach ($ids as $id) {
+            $this->assertFalse($container->getDefinition($id)->isPublic(), $id);
+        }
+        $this->assertTrue($container->getDefinition(Dota2ApiClient::class)->isPublic());
+
+        $container->compile();
+
+        foreach ($ids as $id) {
+            $this->assertFalse($container->has($id), $id);
+        }
+    }
+
+    public function test_applicationHttpClientIsNotReplacedWithStratzConfigured()
+    {
+        $container = $this->createContainer([['stratz' => ['token' => 'tok']]]);
+        $container->compile();
+
+        $this->assertInstanceOf(MockHttpClient::class, $container->get(HttpClientInterface::class));
+        $this->assertInstanceOf(Dota2ApiClient::class, $container->get(Dota2ApiClient::class));
+    }
+
+    public function test_stratzClientConfigReceivesBaseUrlAndToken()
+    {
+        $container = $this->createContainer([[
+            'stratz' => ['base_url' => 'https://example.test/gql', 'token' => 'tok'],
+            'timeout' => 15,
+            'max_retries' => 2,
+        ]]);
+        $container->getDefinition('dota2_api.stratz.config')->setPublic(true);
+        $container->compile();
+
+        /** @var ClientConfig $config */
+        $config = $container->get('dota2_api.stratz.config');
+
+        $this->assertSame('https://example.test/gql', $config->getBaseUrl());
+        $this->assertSame('tok', $config->getApiKey());
+        $this->assertSame(15, $config->getTimeout());
+        $this->assertSame(2, $config->getMaxRetries());
+    }
+
+    public function test_stratzClientConfigDefaultsWithoutToken()
+    {
+        $container = $this->createContainer([[]]);
+        $container->getDefinition('dota2_api.stratz.config')->setPublic(true);
+        $container->compile();
+
+        /** @var ClientConfig $config */
+        $config = $container->get('dota2_api.stratz.config');
+
+        $this->assertSame('https://api.stratz.com/graphql', $config->getBaseUrl());
+        $this->assertNull($config->getApiKey());
+    }
+
+    public function test_stratzSourcesAreCreatedFromSourceFactory()
+    {
+        $container = $this->createContainer([[]]);
+        foreach ([StratzMatchSourceInterface::class, StratzTeamSourceInterface::class] as $id) {
+            $container->getDefinition($id)->setPublic(true);
+        }
+        $container->compile();
+
+        $this->assertInstanceOf(StratzMatchSource::class, $container->get(StratzMatchSourceInterface::class));
+        $this->assertInstanceOf(StratzTeamSource::class, $container->get(StratzTeamSourceInterface::class));
     }
 
     private function createContainer(array $configs): ContainerBuilder
