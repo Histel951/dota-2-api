@@ -8,8 +8,13 @@ use Histel951\Dota2Api\DependencyInjection\Dota2ApiExtension;
 use Histel951\Dota2Api\Match\Domain\Role\PrefilledRoleResolver;
 use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
 use Histel951\Dota2Api\Match\Domain\Role\RoleResolverInterface;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\OpenDotaMatchSource;
+use Histel951\Dota2Api\Match\Application\MatchService;
+use Histel951\Dota2Api\Match\Port\MatchSourceInterface;
+use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
+use Histel951\Dota2Api\Infrastructure\OpenDota\OpenDotaSourceFactory;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Team\OpenDotaTeamSource;
+use Histel951\Dota2Api\Infrastructure\SourceFactoryInterface;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -26,7 +31,7 @@ class Dota2ApiExtensionTest extends TestCase
 
         $client = $container->get(Dota2ApiClient::class);
 
-        $this->assertInstanceOf(OpenDotaMatchProvider::class, $client->matches());
+        $this->assertInstanceOf(MatchService::class, $client->matches());
         $this->assertInstanceOf(OpenDotaTeamSource::class, $client->teams());
         $this->assertSame('secret', $container->getParameter('dota2_api.api_key'));
         $this->assertSame('https://api.opendota.com/api/', $container->getParameter('dota2_api.base_url'));
@@ -47,7 +52,7 @@ class Dota2ApiExtensionTest extends TestCase
 
         $this->assertSame('https://api.opendota.com/api/v2/', $container->getParameter('dota2_api.base_url'));
         $this->assertSame('legacy', $container->getParameter('dota2_api.api_key'));
-        $this->assertInstanceOf(OpenDotaMatchProvider::class, $container->get(Dota2ApiClient::class)->matches());
+        $this->assertInstanceOf(MatchService::class, $container->get(Dota2ApiClient::class)->matches());
     }
 
     public function test_legacyNullApiKeyFallsBackToOpenDotaSection()
@@ -68,14 +73,56 @@ class Dota2ApiExtensionTest extends TestCase
 
     public function test_clientCanBeAutowiredByApplication()
     {
-        // так клиент переопределяется в приложении-потребителе: autowire по интерфейсам провайдеров
+        // так клиент переопределяется в приложении-потребителе: autowire по MatchService и TeamSourceInterface
         $container = $this->createContainer([[]]);
         $container->register(Dota2ApiClient::class, Dota2ApiClient::class)
             ->setAutowired(true)
             ->setPublic(true);
         $container->compile();
 
-        $this->assertInstanceOf(OpenDotaMatchProvider::class, $container->get(Dota2ApiClient::class)->matches());
+        $this->assertInstanceOf(MatchService::class, $container->get(Dota2ApiClient::class)->matches());
+    }
+
+    public function test_sourcesAreCreatedFromSourceFactory()
+    {
+        $container = $this->createContainer([[]]);
+        foreach ([MatchSourceInterface::class, TeamSourceInterface::class, MatchService::class] as $id) {
+            $container->getDefinition($id)->setPublic(true);
+        }
+        $container->compile();
+
+        $this->assertInstanceOf(OpenDotaMatchSource::class, $container->get(MatchSourceInterface::class));
+        $this->assertInstanceOf(OpenDotaTeamSource::class, $container->get(TeamSourceInterface::class));
+        $this->assertInstanceOf(MatchService::class, $container->get(MatchService::class));
+    }
+
+    public function test_clientIsPublic()
+    {
+        $container = $this->createContainer([[]]);
+
+        $this->assertTrue($container->getDefinition(Dota2ApiClient::class)->isPublic());
+    }
+
+    public function test_sourceFactoryIsOpenDotaFactory()
+    {
+        $container = $this->createContainer([[]]);
+
+        $this->assertSame(
+            OpenDotaSourceFactory::class,
+            $container->getDefinition(SourceFactoryInterface::class)->getClass(),
+        );
+    }
+
+    public function test_matchServiceReceivesPrefilledRoleResolver()
+    {
+        $container = $this->createContainer([[]]);
+        $container->getDefinition(MatchService::class)->setPublic(true);
+        $container->compile();
+
+        $resolver = (new \ReflectionProperty(MatchService::class, 'roleResolver'))
+            ->getValue($container->get(MatchService::class));
+
+        $this->assertInstanceOf(PrefilledRoleResolver::class, $resolver);
     }
 
     public function test_roleResolverIsPrefilledDecoratorOverHeuristic()

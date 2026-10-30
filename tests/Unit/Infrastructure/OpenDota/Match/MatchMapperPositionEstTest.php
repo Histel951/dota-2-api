@@ -1,23 +1,22 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
+namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Match;
 
 use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
 use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\Match\Domain\Role\PrefilledRoleResolver;
 use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\Exception\SourceDataException;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
  * Роль игрока из position_est OpenDota, запасной вариант — эвристика ProSceneRoleResolver
  */
-class MatchOpenDotaMapperPositionEstTest extends TestCase
+class MatchMapperPositionEstTest extends TestCase
 {
     private const string FIXTURE = __DIR__ . '/../../../../Fixtures/opendota/match_8794744726.json';
 
@@ -32,7 +31,7 @@ class MatchOpenDotaMapperPositionEstTest extends TestCase
     private const int PLANET = 150961567; // dire, pos4
     private const int NIU = 145957968; // dire, pos3
 
-    /** роли эвристики на фикстуре (совпадают с MatchOpenDotaMapperTest::playersProvider) */
+    /** роли эвристики на фикстуре (совпадают с MatchMapperTest::playersProvider) */
     private const array HEURISTIC_RADIANT = [
         self::AME => PlayerRole::CARRY,
         self::XNOVA => PlayerRole::HARD_SUPPORT,
@@ -49,11 +48,13 @@ class MatchOpenDotaMapperPositionEstTest extends TestCase
         self::NIU => PlayerRole::OFFLANE,
     ];
 
-    private MatchOpenDotaMapper $mapper;
+    private MatchMapper $mapper;
+    private PrefilledRoleResolver $resolver;
 
     public function setUp(): void
     {
-        $this->mapper = new MatchOpenDotaMapper(new PrefilledRoleResolver(new ProSceneRoleResolver()));
+        $this->mapper = new MatchMapper();
+        $this->resolver = new PrefilledRoleResolver(new ProSceneRoleResolver());
     }
 
     public function test_fixtureRolesFollowPositionEst()
@@ -196,21 +197,19 @@ class MatchOpenDotaMapperPositionEstTest extends TestCase
         $this->assertEquals(self::HEURISTIC_RADIANT + self::POSITION_DIRE, $this->roles($match));
     }
 
-    public function test_noMiddleLayoutWithoutPositionEstFailsAsBefore()
+    public function test_noMiddleLayoutWithoutPositionEstFailsWithDomainException()
     {
-        try {
-            $this->mapFixture(static function (array $data): array {
-                $data = self::removeRadiantMiddle($data);
-                foreach ($data['players'] as &$player) {
-                    unset($player['position_est']);
-                }
+        // маппер раскладку принимает, ошибку даёт withResolvedRoles
+        $this->expectException(DomainException::class);
 
-                return $data;
-            });
-            $this->fail('SourceDataException expected');
-        } catch (SourceDataException $e) {
-            $this->assertInstanceOf(DomainException::class, $e->getPrevious());
-        }
+        $this->mapFixture(static function (array $data): array {
+            $data = self::removeRadiantMiddle($data);
+            foreach ($data['players'] as &$player) {
+                unset($player['position_est']);
+            }
+
+            return $data;
+        });
     }
 
     /**
@@ -278,6 +277,8 @@ class MatchOpenDotaMapperPositionEstTest extends TestCase
             $data = $modify($data);
         }
 
-        return $this->mapper->toEntity((new MatchExtractor())->extract(json_encode($data)));
+        return $this->mapper
+            ->toEntity((new MatchExtractor())->extract($data))
+            ->withResolvedRoles($this->resolver);
     }
 }

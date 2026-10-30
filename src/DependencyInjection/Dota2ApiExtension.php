@@ -5,8 +5,8 @@ namespace Histel951\Dota2Api\DependencyInjection;
 
 use Histel951\Dota2Api\Client\Config\ApiSource;
 use Histel951\Dota2Api\Infrastructure\OpenDota\OpenDotaHttpClientFactory;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaProviderFactory;
-use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
+use Histel951\Dota2Api\Infrastructure\OpenDota\OpenDotaSourceFactory;
+use Histel951\Dota2Api\Infrastructure\SourceFactoryInterface;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -54,6 +54,6 @@ final class Dota2ApiExtension extends Extension
         $container->getDefinition('dota2_api.http_client')
             ->setFactory([OpenDotaHttpClientFactory::class, 'create']);
 
-        $container->autowire(ProviderFactory::class, OpenDotaProviderFactory::class);
+        $container->autowire(SourceFactoryInterface::class, OpenDotaSourceFactory::class);
     }
 }

@@ -1,32 +1,33 @@
 <?php
 declare(strict_types = 1);
 
-namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
+namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Match;
 
-use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
-use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
-use Histel951\Dota2Api\Match\Domain\Player\Lane;
-use Histel951\Dota2Api\Match\Domain\Side\Side;
-use Histel951\Dota2Api\Match\Domain\MatchDetail;
-use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\Match\Domain\Player\MatchPlayerPerformance;
 use Histel951\Dota2Api\Exception\SourceDataException;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchMapper;
+use Histel951\Dota2Api\Match\Domain\MatchDetail;
+use Histel951\Dota2Api\Match\Domain\Player\Lane;
+use Histel951\Dota2Api\Match\Domain\Player\MatchPlayerPerformance;
+use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
+use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Side\Side;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TypeError;
+use ValueError;
 
-class MatchOpenDotaMapperTest extends TestCase
+class MatchMapperTest extends TestCase
 {
     private const string FIXTURE = __DIR__ . '/../../../../Fixtures/opendota/match_8794744726.json';
 
-    private MatchOpenDotaMapper $mapper;
+    private MatchMapper $mapper;
     private MatchExtractor $extractor;
 
     public function setUp(): void
     {
-        $this->mapper = new MatchOpenDotaMapper(new ProSceneRoleResolver());
+        $this->mapper = new MatchMapper();
         $this->extractor = new MatchExtractor();
     }
 
@@ -67,7 +68,8 @@ class MatchOpenDotaMapperTest extends TestCase
         int $sentryPlaced,
     )
     {
-        $player = $this->findPlayer($this->mapFixture(), $accountId);
+        $match = $this->mapFixture()->withResolvedRoles(new ProSceneRoleResolver());
+        $player = $this->findPlayer($match, $accountId);
 
         $this->assertSame($side, $player->getIdentity()->getSide());
         $this->assertSame($lane, $player->getIdentity()->getLane()->getValue());
@@ -116,13 +118,47 @@ class MatchOpenDotaMapperTest extends TestCase
         $this->assertNull($match->getDire()->getTeamName()->getValue());
     }
 
-    public function test_toEntityWrapsDomainErrorIntoSourceDataException()
+    public function test_toEntityMapsMatchWithoutDraftAndRegion()
+    {
+        $match = $this->mapFixture(static function (array $data): array {
+            unset($data['picks_bans'], $data['region']);
+
+            return $data;
+        });
+
+        $this->assertSame([], $match->getDraft()->getPicks());
+        $this->assertSame([], $match->getDraft()->getBans());
+        $this->assertSame(0, $match->getRegion()->getId());
+    }
+
+    public function test_toEntitySplitsDraftBySide()
+    {
+        $match = $this->mapFixture();
+
+        $this->assertCount(5, $match->getRadiant()->getDraft()->getPicks());
+        $this->assertCount(5, $match->getDire()->getDraft()->getPicks());
+        $this->assertCount(
+            14,
+            [...$match->getRadiant()->getDraft()->getBans(), ...$match->getDire()->getDraft()->getBans()],
+        );
+    }
+
+    public function test_toEntityMapsDireSidePlayersToDireTeam()
+    {
+        $match = $this->mapFixture();
+
+        foreach ($match->getDire()->getPlayers()->getValue() as $player) {
+            $this->assertSame(Side::DIRE, $player->getIdentity()->getSide());
+        }
+        $this->assertCount(5, $match->getRadiant()->getPlayers()->getValue());
+        $this->assertCount(5, $match->getDire()->getPlayers()->getValue());
+    }
+
+    public function test_toEntityWrapsInvalidValueObjectIntoSourceDataException()
     {
         try {
             $this->mapFixture(static function (array $data): array {
-                foreach ($data['players'] as &$player) {
-                    $player['lane'] = 1;
-                }
+                $data['duration'] = -1;
 
                 return $data;
             });
@@ -130,6 +166,25 @@ class MatchOpenDotaMapperTest extends TestCase
         } catch (SourceDataException $e) {
             $this->assertInstanceOf(DomainException::class, $e->getPrevious());
         }
+    }
+
+    public function test_toEntityDoesNotResolveRoles()
+    {
+        // раскладка линий, на которой падает резолвер: маппер роли не резолвит и матч отдаёт,
+        // ошибку даёт withResolvedRoles
+        $match = $this->mapFixture(static function (array $data): array {
+            foreach ($data['players'] as &$player) {
+                $player['lane'] = 1;
+                $player['position_est'] = null;
+            }
+
+            return $data;
+        });
+
+        $this->assertCount(10, $match->getPlayers()->getValue());
+
+        $this->expectException(DomainException::class);
+        $match->withResolvedRoles(new ProSceneRoleResolver());
     }
 
     public function test_toEntityWrapsUnexpectedFieldTypeIntoSourceDataException()
@@ -146,37 +201,65 @@ class MatchOpenDotaMapperTest extends TestCase
         }
     }
 
-    #[DataProvider('jungleLaneProvider')]
-    public function test_toEntityResolvesJungleLaneFromLaneRole(int $accountId, int $laneRole, Lane $expected)
+    public function test_toEntityWrapsUnknownDraftSideIntoSourceDataException()
     {
-        $match = $this->mapFixture(static function (array $data) use ($accountId, $laneRole): array {
+        try {
+            $this->mapFixture(static function (array $data): array {
+                $data['picks_bans'][0]['team'] = 7;
+
+                return $data;
+            });
+            $this->fail('SourceDataException expected');
+        } catch (SourceDataException $e) {
+            $this->assertInstanceOf(ValueError::class, $e->getPrevious());
+        }
+    }
+
+    #[DataProvider('requiredFieldProvider')]
+    public function test_toEntityFailsOnMissingRequiredField(string $field)
+    {
+        $this->expectException(SourceDataException::class);
+        $this->expectExceptionMessage($field);
+
+        $this->mapFixture(static function (array $data) use ($field): array {
+            unset($data[$field]);
+
+            return $data;
+        });
+    }
+
+    public static function requiredFieldProvider(): array
+    {
+        return [
+            'match_id' => ['match_id'],
+            'duration' => ['duration'],
+            'radiant_win' => ['radiant_win'],
+            'players' => ['players'],
+        ];
+    }
+
+    public function test_toEntityFailsOnEmptyData()
+    {
+        $this->expectException(SourceDataException::class);
+
+        $this->mapper->toEntity([]);
+    }
+
+    public function test_toEntityResolvesDireJungleLaneFromLaneRole()
+    {
+        // подробные случаи линий — в LaneNormalizerTest; здесь проверяется связка маппера
+        $match = $this->mapFixture(static function (array $data): array {
             foreach ($data['players'] as &$player) {
-                if ($player['account_id'] === $accountId) {
-                    $player['lane'] = $player['isRadiant'] ? 4 : 5;
-                    $player['lane_role'] = $laneRole;
+                if ($player['account_id'] === 249835593) {
+                    $player['lane'] = 5;
+                    $player['lane_role'] = 4;
                 }
             }
 
             return $data;
         });
 
-        $player = $this->findPlayer($match, $accountId);
-
-        $this->assertSame($expected, $player->getIdentity()->getLane()->getValue());
-    }
-
-    public static function jungleLaneProvider(): array
-    {
-        // линия возвращается со стороны radiant: safe lane dire — это Lane::OFFLANE
-        return [
-            'radiant safe' => [898754153, 1, Lane::SAFE],
-            'radiant offlane' => [98887913, 3, Lane::OFFLANE],
-            'radiant jungle' => [94296097, 4, Lane::SAFE],
-            'dire safe' => [170896543, 1, Lane::OFFLANE],
-            'dire middle' => [315272623, 2, Lane::MIDDLE],
-            'dire offlane' => [145957968, 3, Lane::SAFE],
-            'dire jungle' => [249835593, 4, Lane::OFFLANE],
-        ];
+        $this->assertSame(Lane::OFFLANE, $this->findPlayer($match, 249835593)->getIdentity()->getLane()->getValue());
     }
 
     /**
@@ -184,13 +267,13 @@ class MatchOpenDotaMapperTest extends TestCase
      */
     private function mapFixture(?callable $modify = null): MatchDetail
     {
-        $json = file_get_contents(self::FIXTURE);
+        $data = json_decode(file_get_contents(self::FIXTURE), true);
 
         if (null !== $modify) {
-            $json = json_encode($modify(json_decode($json, true)));
+            $data = $modify($data);
         }
 
-        return $this->mapper->toEntity($this->extractor->extract($json));
+        return $this->mapper->toEntity($this->extractor->extract($data));
     }
 
     private function findPlayer(MatchDetail $match, int $accountId): MatchPlayerPerformance
