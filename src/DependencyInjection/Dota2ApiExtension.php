@@ -18,6 +18,8 @@ final class Dota2ApiExtension extends Extension
         $container->setParameter('dota2_api.max_retries', $config['max_retries']);
         $container->setParameter('dota2_api.opendota.base_url', $config['opendota']['base_url']);
         $container->setParameter('dota2_api.opendota.api_key', $config['opendota']['api_key']);
+        $container->setParameter('dota2_api.stratz.base_url', $config['stratz']['base_url']);
+        $container->setParameter('dota2_api.stratz.token', $config['stratz']['token']);
 
         $loader = new PhpFileLoader(
             $container,
