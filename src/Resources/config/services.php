@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
+use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
@@ -51,7 +52,9 @@ return static function (ContainerConfigurator $configurator): void {
 
     $services->alias(ApiGatewayInterface::class, ApiGateway::class);
 
-    $services->set(RoleResolverInterface::class, ProSceneRoleResolver::class);
+    // сначала роли из position_est, при неполном наборе — делегирование эвристике ProSceneRoleResolver
+    $services->set(RoleResolverInterface::class, PrefilledRoleResolver::class)
+        ->arg('$inner', inline_service(ProSceneRoleResolver::class));
 
     $services->set(MatchesProviderInterface::class)
         ->factory([service(ProviderFactory::class), 'createMatchProvider']);
