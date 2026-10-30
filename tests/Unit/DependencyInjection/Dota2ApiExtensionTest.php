@@ -117,6 +117,22 @@ class Dota2ApiExtensionTest extends TestCase
         $this->assertSame(ProSceneRoleResolver::class, $inner->getClass());
     }
 
+    public function test_stratzParametersHaveDefaults()
+    {
+        $container = $this->createContainer([[]]);
+
+        $this->assertSame('https://api.stratz.com/graphql', $container->getParameter('dota2_api.stratz.base_url'));
+        $this->assertNull($container->getParameter('dota2_api.stratz.token'));
+    }
+
+    public function test_stratzParametersAreTakenFromConfig()
+    {
+        $container = $this->createContainer([['stratz' => ['base_url' => 'https://example.test/gql', 'token' => 'tok']]]);
+
+        $this->assertSame('https://example.test/gql', $container->getParameter('dota2_api.stratz.base_url'));
+        $this->assertSame('tok', $container->getParameter('dota2_api.stratz.token'));
+    }
+
     private function createContainer(array $configs): ContainerBuilder
     {
         $container = new ContainerBuilder();
