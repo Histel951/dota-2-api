@@ -3,6 +3,7 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 
+use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
@@ -25,7 +26,7 @@ final class OpenDotaProviderFactory implements ProviderFactory
         ?RoleResolverInterface $roleResolver = null,
     )
     {
-        $this->roleResolver = $roleResolver ?? new ProSceneRoleResolver();
+        $this->roleResolver = $roleResolver ?? new PrefilledRoleResolver(inner: new ProSceneRoleResolver());
     }
 
     public function createMatchProvider(): MatchesProviderInterface
