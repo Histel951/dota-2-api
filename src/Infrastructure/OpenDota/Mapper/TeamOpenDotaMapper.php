@@ -50,7 +50,7 @@ class TeamOpenDotaMapper extends AbstractMapper
         try {
             return new Team(
                 id: new TeamId($data['team_id']),
-                name: new TeamName($optional['name']),
+                name: $this->createName($optional['name']),
                 tag: $this->createTag($data['tag']),
                 stats: $stats,
                 lastMatchTime: $this->createDateTime($data['last_match_time']),
@@ -58,6 +58,14 @@ class TeamOpenDotaMapper extends AbstractMapper
         } catch (Throwable $e) {
             throw new MappingException($e->getMessage(), $e->getCode(), $e);
         }
+    }
+
+    /**
+     * Пустое или отсутствующее имя команды — «имени нет», как и для tag
+     */
+    private function createName(?string $name): ?TeamName
+    {
+        return $name === null || trim($name) === '' ? null : new TeamName($name);
     }
 
     /**
