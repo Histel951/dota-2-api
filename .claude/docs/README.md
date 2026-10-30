@@ -29,6 +29,11 @@ Symfony-бандл (`histel951/dota-2-api`, тип `symfony-bundle`) для за
 - [known-issues.md](known-issues.md) — оставшийся технический долг
 - [refactoring-plan.md](refactoring-plan.md) — ТЗ на рефакторинг (выполнено) и отступления от него
 
+## Агенты и скиллы
+
+- `/develop-feature` (`.claude/skills/develop-feature/`) — интервью → ТЗ → реализация вертикальными срезами → финальная проверка
+- `.claude/agents/`: `architect` (проектирование, только чтение), `domain-implementer` (домен, мапперы, экстракторы), `api-designer` (порты, провайдеры, DI, конфиг, клиент), `test-writer` (PHPUnit и фикстуры), `ddd-reviewer` (ревью границ слоёв, только чтение)
+
 ## Прочее в корне
 
 - `examples/fetch_match.php` — сборка клиента без Symfony и вывод статистики матча
