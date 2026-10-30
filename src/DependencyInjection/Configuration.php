@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
-use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
+use Histel951\Dota2Api\Client\Config\ApiSource;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 

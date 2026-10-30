@@ -3,12 +3,12 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Support\OpenDota;
 
-use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamPlayerMapper;
 use LogicException;
 use ReflectionClass;
 
@@ -21,7 +21,7 @@ use ReflectionClass;
 final class SourceFieldsChecker
 {
     /**
-     * Вложенные ключи игрока матча. Захардкожены в MatchOpenDotaMapper (не вынесены в константы),
+     * Вложенные ключи игрока матча. Захардкожены в PlayerMapper (не вынесены в константы),
      * поэтому перечислены здесь явно. Путь через точку, достаточно одного игрока с ключом.
      */
     private const array MATCH_PLAYER_NESTED_ANY = [
@@ -29,10 +29,10 @@ final class SourceFieldsChecker
         'ability_uses.ability_lamp_use',
     ];
 
-    /** Ключи каждого элемента picks_bans[]; захардкожены в MatchOpenDotaMapper. */
+    /** Ключи каждого элемента picks_bans[]; захардкожены в DraftMapper. */
     private const array MATCH_PICKS_BANS_EACH = ['hero_id', 'order', 'team', 'is_pick'];
 
-    /** Тип события objectives[], которое читает MatchOpenDotaMapper. */
+    /** Тип события objectives[], которое читает PlayerMapper. */
     private const string MINIBOSS_OBJECTIVE_TYPE = 'CHAT_MESSAGE_MINIBOSS_KILL';
 
     /**
@@ -207,15 +207,15 @@ final class SourceFieldsChecker
             ),
             ...self::checkRequired(
                 $root,
-                self::readFields(MatchOpenDotaMapper::class, 'REQUIRED_FIELDS'),
+                self::readFields(MatchMapper::class, 'REQUIRED_FIELDS'),
                 $context,
-                'MatchOpenDotaMapper::REQUIRED_FIELDS',
+                'MatchMapper::REQUIRED_FIELDS',
             ),
             ...self::checkOptional(
                 $root,
-                self::readFields(MatchOpenDotaMapper::class, 'OPTIONAL_FIELDS'),
+                self::readFields(MatchMapper::class, 'OPTIONAL_FIELDS'),
                 $context,
-                'MatchOpenDotaMapper::OPTIONAL_FIELDS',
+                'MatchMapper::OPTIONAL_FIELDS',
             ),
         ];
 
@@ -235,7 +235,7 @@ final class SourceFieldsChecker
                     $players,
                     self::MATCH_PLAYER_NESTED_ANY,
                     $context . ' players',
-                    'MatchOpenDotaMapper, hardcoded',
+                    'MatchMapper, hardcoded',
                 ),
             ];
         }
@@ -253,7 +253,7 @@ final class SourceFieldsChecker
     {
         return self::checkMapperList(
             [$team],
-            TeamOpenDotaMapper::class,
+            TeamMapper::class,
             sprintf('teams/%s', $team['team_id'] ?? '?'),
         );
     }
@@ -266,7 +266,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeams(array $teams): array
     {
-        return self::checkMapperList($teams, TeamOpenDotaMapper::class, 'teams');
+        return self::checkMapperList($teams, TeamMapper::class, 'teams');
     }
 
     /**
@@ -277,7 +277,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeamMatches(array $matches): array
     {
-        return self::checkMapperList($matches, TeamMatchOpenDotaMapper::class, 'teams/{id}/matches');
+        return self::checkMapperList($matches, TeamMatchMapper::class, 'teams/{id}/matches');
     }
 
     /**
@@ -288,7 +288,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeamPlayers(array $players): array
     {
-        return self::checkMapperList($players, TeamPlayerOpenDotaMapper::class, 'teams/{id}/players');
+        return self::checkMapperList($players, TeamPlayerMapper::class, 'teams/{id}/players');
     }
 
     /**
@@ -299,12 +299,12 @@ final class SourceFieldsChecker
      */
     public static function checkTeamHeroes(array $heroes): array
     {
-        return self::checkMapperList($heroes, TeamHeroOpenDotaMapper::class, 'teams/{id}/heroes');
+        return self::checkMapperList($heroes, TeamHeroMapper::class, 'teams/{id}/heroes');
     }
 
     /**
      * REQUIRED/OPTIONAL маппера применяются к списку элементов. Пустой ответ — нарушение.
-     * Константа OPTIONAL_FIELDS необязательна (у TeamHeroOpenDotaMapper её нет).
+     * Константа OPTIONAL_FIELDS необязательна (у TeamHeroMapper её нет).
      *
      * @param list<array<string, mixed>> $items
      * @param class-string $mapper
@@ -347,7 +347,7 @@ final class SourceFieldsChecker
     private static function checkObjectives(array $match, string $context): array
     {
         $objectives = $match['objectives'] ?? null;
-        $source = 'MatchOpenDotaMapper, hardcoded';
+        $source = 'MatchMapper, hardcoded';
 
         if (!is_array($objectives) || $objectives === []) {
             return [sprintf('%s: "objectives" is missing or empty (%s)', $context, $source)];
@@ -381,14 +381,14 @@ final class SourceFieldsChecker
         $picksBans = $match['picks_bans'] ?? null;
 
         if (!is_array($picksBans) || $picksBans === []) {
-            return [sprintf('%s: "picks_bans" is missing or empty (MatchOpenDotaMapper, hardcoded)', $context)];
+            return [sprintf('%s: "picks_bans" is missing or empty (MatchMapper, hardcoded)', $context)];
         }
 
         return self::checkEach(
             $picksBans,
             self::MATCH_PICKS_BANS_EACH,
             $context . ' picks_bans',
-            'MatchOpenDotaMapper, hardcoded',
+            'MatchMapper, hardcoded',
         );
     }
 

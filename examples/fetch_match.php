@@ -1,15 +1,15 @@
 <?php
 
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
-use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
-use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
-use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
+use Histel951\Dota2Api\SharedKernel\MatchId;
+use Histel951\Dota2Api\Match\Domain\Side\Side;
+use Histel951\Dota2Api\Client\Config\ClientConfig;
+use Histel951\Dota2Api\Client\Config\ApiSource;
 use Symfony\Component\HttpClient\HttpClient;
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
-$client = (new Dota2ApiClientBuilder(new ConfigurationHttpClient(
+$client = (new Dota2ApiClientBuilder(new ClientConfig(
     baseUrl: 'https://api.opendota.com/api/',
     apiSource: ApiSource::OPENDOTA,
     timeout: 600
