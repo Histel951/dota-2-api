@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: "Пишет PHPUnit-тесты для бандла dota-api: VO, доменные сервисы (ProSceneRoleResolver), мапперы на фикстурах OpenDota, провайдеры с моками gateway/мапперов, DI-расширение. Используй при реализации фичи или фиксе бага, которым нужно покрытие."
+description: "Пишет PHPUnit-тесты для бандла dota-api: VO, доменные сервисы (ProSceneRoleResolver, PrefilledRoleResolver, MatchDetail::withResolvedRoles), MatchService с моком MatchSourceInterface, мапперы на фикстурах OpenDota, источники OpenDota*Source с gateway как в проде или моками, DI-расширение, Builder, архитектурный тест. Используй при реализации фичи или фиксе бага, которым нужно покрытие."
 tools:
   - Read
   - Edit
@@ -18,12 +18,15 @@ model: sonnet
 Прочитай раздел «Тесты» в `.claude/docs/conventions.md`, затем существующие тесты в том
 же неймспейсе и повтори их стиль. Эталоны:
 
-- маппер на реальной фикстуре — `tests/Unit/Infrastructure/OpenDota/Mapper/MatchOpenDotaMapperTest.php`, `Team*OpenDotaMapperTest.php`;
+- маппер на реальной фикстуре — `tests/Unit/Infrastructure/OpenDota/Match/MatchMapperTest.php`, `PlayerMapperTest.php`, `tests/Unit/Infrastructure/OpenDota/Team/Team*MapperTest.php`;
 - поля источника по фикстуре — `tests/Unit/Infrastructure/OpenDota/SourceFields/*` поверх `tests/Support/OpenDota/SourceFieldsChecker`;
-- провайдер с моками gateway и мапперов — `tests/Unit/Infrastructure/OpenDota/Provider/OpenDotaTeamProviderTest.php`;
-- доменный сервис на синтетических данных — `tests/Unit/Domain/Entities/Match/Services/ProSceneRoleResolverTest.php`;
-- DI — `tests/Unit/DependencyInjection/Dota2ApiExtensionTest.php`;
-- HTTP-клиент — `tests/Unit/Infrastructure/OpenDota/Http/OpenDotaHttpClientFactoryTest.php`.
+- источник с gateway как в проде (`OpenDotaHttpClientFactory` + `MockHttpClient`; 404/429/5xx, таймауты, пакетная загрузка) — `tests/Unit/Infrastructure/OpenDota/Match/OpenDotaMatchSourceTest.php`;
+- источник с моками gateway и мапперов — `tests/Unit/Infrastructure/OpenDota/Team/OpenDotaTeamSourceTest.php`;
+- Application с моком порта — `tests/Unit/Match/Application/MatchServiceTest.php`;
+- доменный сервис на синтетических данных — `tests/Unit/Match/Domain/Role/ProSceneRoleResolverTest.php`, агрегат — `tests/Unit/Match/Domain/MatchDetailTest.php`;
+- DI — `tests/Unit/DependencyInjection/Dota2ApiExtensionTest.php`, Builder — `tests/Unit/Client/Dota2ApiClientBuilderTest.php`;
+- HTTP-клиент — `tests/Unit/Infrastructure/OpenDota/OpenDotaHttpClientFactoryTest.php`;
+- правила зависимостей слоёв — `tests/Unit/Architecture/LayerDependenciesTest.php`.
 
 ## Правила
 
@@ -32,8 +35,10 @@ model: sonnet
 2. Имена методов — `test_<camelCaseОписание>` (`test_toEntityMapsMatchWithoutTeams`).
    Параметризованные случаи — `#[DataProvider('...')]` со static-провайдером.
 3. Без сети: HTTP мокается через `Symfony\Component\HttpClient\MockHttpClient` /
-   `MockResponse`, в тестах провайдеров мокается `ApiGateway` и мапперы.
-   Доменные объекты (VO, сущности) не мокаем — создаём настоящие.
+   `MockResponse`. Для HTTP-ошибок и ретраев gateway собирается как в проде:
+   `new ApiGateway(OpenDotaHttpClientFactory::create($mock, $config))`; в остальных тестах
+   источников можно мокать `ApiGateway` и мапперы, в тестах `MatchService` —
+   `MatchSourceInterface`. Доменные объекты (VO, сущности) не мокаем — создаём настоящие.
 4. Данные источника — из реальных ответов: фикстуры в `tests/Fixtures/opendota/`
    (`match_8794744726.json` — полный матч). Ожидаемые значения в тесте сверяй с
    фикстурой, а не придумывай. Новая фикстура — реальный ответ через
@@ -42,19 +47,23 @@ model: sonnet
    ходит в сеть — в тестах его не вызываем. Для редких раскладок (роли, отсутствующие поля) — синтетика
    в тесте, как в `ProSceneRoleResolverTest`.
 5. Не только happy path: невалидные значения VO → `Invalid*Exception`; отсутствующее
-   обязательное поле и неожиданный тип → `MappingException`; нераспарсенный матч;
-   матч без команд; сторона Dire; ошибки `ApiGatewayException` (404, 429, 5xx).
+   обязательное поле и неожиданный тип → `SourceDataException`; нераспарсенный матч;
+   матч без команд; сторона Dire; ошибки `SourceRequestException` (404, 429, 5xx, таймаут);
+   в `getMatches()` ошибка одного матча — значением в `getError()`, остальные отдаются;
+   ошибка ролей — `DomainException` в `getError()`.
    Если оркестратор передал матрицу краевых случаев — каждая строка покрыта тестом;
    непокрытые перечисли в отчёте с причиной.
 6. Тесты независимы: прогон идёт с `--order-by random`, порядок не закладываем.
 7. `phpunit.xml.dist` падает на warnings, deprecations и risky — тест без ассертов или с
    deprecation считается провалом.
-8. При изменении `MatchPlayerPerformance` обнови хелпер `createPlayer()` в
-   `ProSceneRoleResolverTest` и ожидания в `MatchOpenDotaMapperTest::playersProvider()`.
+8. При изменении `MatchPlayerPerformance` обнови хелперы `createPlayer()` в
+   `ProSceneRoleResolverTest` и `MatchDetailTest`, ожидания в `PlayerMapperTest` и
+   `MatchMapperTest::playersProvider()`.
 
 ## Прогон
 
 - Свои тесты: `php vendor/bin/phpunit tests/Unit/<path> --order-by random`
+- Правила слоёв: `php vendor/bin/phpunit tests/Unit/Architecture`
 - Весь набор (быстрый, ~3 с): `php vendor/bin/phpunit --order-by random`
 
 ## Границы

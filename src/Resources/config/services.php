@@ -2,15 +2,16 @@
 declare(strict_types=1);
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
-use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
-use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
-use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
-use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
+use Histel951\Dota2Api\Match\Domain\Role\PrefilledRoleResolver;
+use Histel951\Dota2Api\Match\Domain\Role\ProSceneRoleResolver;
+use Histel951\Dota2Api\Match\Application\MatchService;
+use Histel951\Dota2Api\Match\Port\MatchSourceInterface;
+use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
+use Histel951\Dota2Api\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
-use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
-use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
+use Histel951\Dota2Api\Client\Config\ClientConfig;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
+use Histel951\Dota2Api\Infrastructure\SourceFactoryInterface;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -19,7 +20,7 @@ use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
 use function Symfony\Component\DependencyInjection\Loader\Configurator\service;
 
 /**
- * Реализация ProviderFactory, фабрика 'dota2_api.http_client' и параметры
+ * Реализация SourceFactoryInterface, фабрика 'dota2_api.http_client' и параметры
  * dota2_api.base_url / dota2_api.api_key задаются в Dota2ApiExtension по source
  */
 return static function (ContainerConfigurator $configurator): void {
@@ -31,7 +32,7 @@ return static function (ContainerConfigurator $configurator): void {
         ->autowire()
         ->autoconfigure();
 
-    $services->set(ConfigurationHttpClient::class)
+    $services->set(ClientConfig::class)
         ->args([
             '$baseUrl' => param('dota2_api.base_url'),
             '$timeout' => param('dota2_api.timeout'),
@@ -44,7 +45,7 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set('dota2_api.http_client', HttpClientInterface::class)
         ->args([
             inline_service(HttpClientInterface::class)->factory([HttpClient::class, 'create']),
-            service(ConfigurationHttpClient::class),
+            service(ClientConfig::class),
         ]);
 
     $services->set(ApiGateway::class)
@@ -56,11 +57,13 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(RoleResolverInterface::class, PrefilledRoleResolver::class)
         ->arg('$inner', inline_service(ProSceneRoleResolver::class));
 
-    $services->set(MatchesProviderInterface::class)
-        ->factory([service(ProviderFactory::class), 'createMatchProvider']);
+    $services->set(MatchSourceInterface::class)
+        ->factory([service(SourceFactoryInterface::class), 'createMatchSource']);
 
-    $services->set(TeamProviderInterface::class)
-        ->factory([service(ProviderFactory::class), 'createTeamProvider']);
+    $services->set(TeamSourceInterface::class)
+        ->factory([service(SourceFactoryInterface::class), 'createTeamSource']);
+
+    $services->set(MatchService::class);
 
     $services->set(Dota2ApiClient::class)
         ->public();
