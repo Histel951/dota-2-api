@@ -29,9 +29,9 @@ final class StratzMatchSource implements MatchSourceInterface
      * @throws SourceRequestException
      * @throws SourceDataException
      */
-    public function getMatch(MatchId $id): MatchDetail
+    public function getMatch(MatchId $id, bool $withPlaybackData = true): MatchDetail
     {
-        ['query' => $query, 'variables' => $variables] = MatchQuery::build([$id]);
+        ['query' => $query, 'variables' => $variables] = MatchQuery::build([$id], $withPlaybackData);
 
         return $this->mapper->toEntity($this->gateway->query($query, $variables)->field(MatchQuery::alias(0)));
     }
@@ -41,13 +41,13 @@ final class StratzMatchSource implements MatchSourceInterface
      * @param positive-int $concurrency
      * @return Generator<MatchId, MatchDetail|SourceRequestException|SourceDataException, mixed, void>
      */
-    public function getMatches(array $ids, int $concurrency): Generator
+    public function getMatches(array $ids, int $concurrency, bool $withPlaybackData = true): Generator
     {
         $responses = ConcurrentRequests::fetch(
-            array_chunk($ids, MatchQuery::BATCH_SIZE),
+            array_chunk($ids, MatchQuery::batchSize($withPlaybackData)),
             $concurrency,
-            function (array $batch): ResponseInterface {
-                ['query' => $query, 'variables' => $variables] = MatchQuery::build($batch);
+            function (array $batch) use ($withPlaybackData): ResponseInterface {
+                ['query' => $query, 'variables' => $variables] = MatchQuery::build($batch, $withPlaybackData);
 
                 return $this->gateway->request($query, $variables);
             },
