@@ -5,11 +5,15 @@ namespace Histel951\Dota2Api\Tests\Unit\DependencyInjection;
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
 use Histel951\Dota2Api\DependencyInjection\Dota2ApiExtension;
+use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
+use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
+use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaTeamProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -72,6 +76,18 @@ class Dota2ApiExtensionTest extends TestCase
         $container->compile();
 
         $this->assertInstanceOf(OpenDotaMatchProvider::class, $container->get(Dota2ApiClient::class)->matches());
+    }
+
+    public function test_roleResolverIsPrefilledDecoratorOverHeuristic()
+    {
+        $container = $this->createContainer([[]]);
+
+        $definition = $container->getDefinition(RoleResolverInterface::class);
+        $inner = $definition->getArgument('$inner');
+
+        $this->assertSame(PrefilledRoleResolver::class, $definition->getClass());
+        $this->assertInstanceOf(Definition::class, $inner);
+        $this->assertSame(ProSceneRoleResolver::class, $inner->getClass());
     }
 
     public function test_stratzSourceIsRejected()

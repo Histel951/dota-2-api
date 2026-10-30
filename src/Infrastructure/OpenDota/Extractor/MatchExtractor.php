@@ -67,6 +67,7 @@ class MatchExtractor implements ExtractorInterface
         'ability_uses',
         'item_usage',
         'item_uses',
+        'position_est',
     ];
 
     /**
@@ -78,7 +79,7 @@ class MatchExtractor implements ExtractorInterface
 
         $players = [];
         foreach ($data['players'] as $player) {
-            $players[] = $this->createExtracted($player, self::PLAYER_FIELDS);
+            $players[] = $this->createExtracted($player, self::PLAYER_FIELDS, true);
         }
 
         return [
