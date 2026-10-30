@@ -10,7 +10,7 @@
 - Время: `Duration` (`fromSeconds()` / `fromMinutesAndSeconds()`), `MatchStartTime` (`fromTimestamp()`).
 - `Region/` — `Region::fromId(?int)` (неизвестный / null → `Region::unknown()`), enum `RegionType` (регионы Valve).
 - `Side` (RADIANT=0, DIRE=1).
-- Показатели: `Counter` (int ≥ 0, база всех счётчиков), `KDA`, `GPM`, `XPM`, `WinrateStats` (`fromGames(gamesPlayed, wins)`: played/won/lost, winrate в %).
+- Показатели: `Counter` (int ≥ 0, база всех счётчиков), `KDA` (kills/deaths/assists ≥ 0; `getCoefficient()` = `round((kills + assists) / max(1, deaths), 2)` — без смертей делитель 1, как принято в Dota: 3/0/5 → 8.0, 3/2/5 → 4.0), `GPM`, `XPM`, `WinrateStats` (`fromGames(gamesPlayed, wins)`: played/won/lost, winrate в %).
 - `Draft/` — `Draft` (picks/bans), `DraftDecision` (heroId, `DraftOrder`, `Side`, isPick).
 - `Exception/` — `DomainException` и `Invalid*Exception` этих VO.
 
@@ -36,7 +36,7 @@ MatchDetail                         — OpenDota/Match/Domain/MatchDetail
 ├─ result: MatchResult              — Side/, выводится из сторон: MatchResult::fromSides(radiant, dire) по isWon()
 └─ players: MatchPlayers            — Player/, выводится из сторон: [...radiant, ...dire]
 
-MatchPlayerPerformance (Player/, immutable, роль меняется только через withRole())
+MatchPlayerPerformance (Player/, immutable)
 ├─ identity:   Identity (PlayerId, HeroId, Side, MatchPlayerLane(Lane), playerProName, playerPersonaName)
 ├─ kda:        KDA
 ├─ role:       Role(PlayerRole)
@@ -50,33 +50,15 @@ MatchPlayerPerformance (Player/, immutable, роль меняется тольк
 
 Счётчики и группы статистики — в `OpenDota/Match/Domain/Player/Stats/`; `KDA`, `GPM`, `XPM`, `Counter` — из `SharedKernel`.
 
-`MatchDetail` принимает стороны, а `result` и `players` вычисляет сам в конструкторе — рассинхрона между ними не бывает. `withResolvedRoles(RoleResolverInterface)` возвращает копию матча: radiant уходит в `resolve(..., true)`, dire — в `resolve(..., false)`, стороны пересобираются через `TeamSide::withPlayers()`. Ошибка резолвера — `DomainException`. Вызывает его только `OpenDota/Match/Application/MatchService`. Исключение контекста — `Exception/MatchPlayersException`.
+`MatchDetail` принимает стороны, а `result` и `players` вычисляет сам в конструкторе — рассинхрона между ними не бывает. Роли приходят готовыми из маппера; мутаторов у агрегата нет.
 
 `PlayerRole`: UNKNOWN=0, CARRY=1, MIDDLE=2, OFFLANE=3, SUPPORT=4, HARD_SUPPORT=5. `Lane` (абсолютная, со стороны Radiant): SAFE=1, MIDDLE=2, OFFLANE=3.
 
-### Роли (`OpenDota/Match/Domain/Role`)
+### Роли
 
-`RoleResolverInterface` → `PrefilledRoleResolver(inner: ProSceneRoleResolver)`, для каждой стороны отдельно, через `MatchDetail::withResolvedRoles()` в `MatchService`.
+Роль игрока — только `players[].position_est` OpenDota, его ставит `OpenDota/Infrastructure/Match/PlayerMapper`: значения 1–5 совпадают с `PlayerRole`, всё остальное (null, нет ключа, вне 1–5, не int) → `UNKNOWN` **у этого игрока**, матч маппится, остальные роли не трогаются. Повторы (две одинаковые роли на стороне) берутся как есть. Эвристики, резолвера и пересчёта ролей нет; `MatchService` роли не трогает, ошибок ролей не бывает.
 
-1. `PlayerMapper` ставит начальную роль из `players[].position_est` OpenDota: значения 1–5 совпадают с `PlayerRole`, всё остальное (null, нет ключа, вне 1–5, не int) → UNKNOWN. Ключ есть только у распарсенных матчей. Источник роли не резолвит.
-2. `PrefilledRoleResolver`: если у стороны ровно 5 игроков и роли — полный набор 1–5 без повторов и UNKNOWN, роли остаются как есть. Иначе **вся сторона** уходит в `ProSceneRoleResolver` (источники внутри команды не смешиваются).
-
-На 25 про-матчах (2026-10-30) `position_est` был валиден у 50 из 50 сторон и совпал с эвристикой у 244 из 250 игроков. Расхождения — перестановки SUPPORT ↔ HARD_SUPPORT и OFFLANE ↔ SUPPORT (эвристика отдаёт оффлейн по GPM, даже если игрок ставил сентри).
-
-#### `ProSceneRoleResolver` (запасной вариант)
-
-Роль выводится по линии, GPM и варданию. Резолвер работает для каждой стороны отдельно и требует ровно 5 игроков.
-
-1. Для Dire линия нормализуется: SAFE ↔ OFFLANE.
-2. Mid:
-   - 1 игрок → MIDDLE.
-   - 2 игрока → больший GPM получает MIDDLE, второй становится HARD_SUPPORT (если на safe не 2 игрока) или SUPPORT (если на offlane не 2).
-   - 3 игрока → больший GPM получает MIDDLE, двое других — саппорты по sentry (только если на каждой из остальных линий по 1 игроку).
-3. Safe (CARRY / HARD_SUPPORT) и Offlane (OFFLANE / SUPPORT):
-   - 1 игрок → core-роль.
-   - 2 игрока → core по большему GPM.
-   - 3 и больше → core по GPM, остальные — HARD_SUPPORT и SUPPORT по количеству sentry.
-4. Неразрешимые раскладки бросают `DomainException` — в `MatchFetchResult::getError()` он попадает как есть.
+`position_est` OpenDota отдаёт у любого распарсенного матча (проверено на 5000000000 и 7000000000, 2019–2023, и на 25 про-матчах 2026-10-30 — валиден у 50 из 50 сторон); про-матчи распарсены всегда. У нераспарсенного матча все роли — `UNKNOWN` (вне области бандла — api-coverage.md → «Область бандла»).
 
 ## OpenDota — команды (`OpenDota/Team/Domain`)
 
@@ -114,7 +96,7 @@ MatchPlayer (Player/)
 
 - `MatchDetail` проверяет, что `radiant` — сторона Radiant, а `dire` — Dire; `TeamSide` — что все её игроки с той же стороны. Нарушение → `Exception/InvalidMatchSideException`. `StunDuration < 0` → `Exception/InvalidStunDurationException`.
 - `Lane` — линия **относительно команды игрока** (как отдаёт STRATZ): `SAFE`, `MIDDLE`, `OFF`, `JUNGLE`, `ROAMING`, `UNKNOWN` (нераспарсенный матч / неизвестное значение). В абсолютную не переводится.
-- `Position` — позиция 1–5 от STRATZ: `CARRY=1`, `MIDDLE=2`, `OFFLANE=3`, `SOFT_SUPPORT=4`, `HARD_SUPPORT=5`. Это и есть роль: эвристики, резолвера и `withRole()` у STRATZ нет. `null` — STRATZ позицию не определил (нераспарсенный матч).
+- `Position` — позиция 1–5 от STRATZ: `CARRY=1`, `MIDDLE=2`, `OFFLANE=3`, `SOFT_SUPPORT=4`, `HARD_SUPPORT=5`. Это и есть роль: эвристик и резолвера нет (как и у OpenDota). `null` — STRATZ позицию не определил (нераспарсенный матч).
 - `proName` — `steamAccount.proSteamAccount.name`, `personaName` — `steamAccount.name`; пустое → `null`.
 - `ParsedStats::getBuybacks()` — `null`, если STRATZ не отдал `playbackData` (не пересобрал его из реплея), даже у распарсенного матча. Пустой список событий → `Buybacks(0)`.
 - Счётчики-маркеры в `Player/Stats/`: NetWorth, GoldSpent, HeroDamage, TowerDamage, HeroHealing, LastHits, Denies, LaneCreeps, NeutralCreeps, AncientCreeps, CampsStacked, ObserversPlaced, SentriesPlaced, ObserversDestroyed, SentriesDestroyed, RunePickups, CourierKills, SmokeUses, Buybacks.
@@ -133,6 +115,6 @@ MatchPlayer (Player/)
 - `Team` — TeamId, ?TeamName, ?TeamTag (пустые → `null`), `record: WinrateStats` (winCount + lossCount, winCount), lastMatchTime. **Рейтинга нет** — STRATZ его не отдаёт.
 - `History/TeamMatch` — MatchId, side (`Side`, за кого играла команда), won, `?Score`, startTime, Duration, Cluster, LeagueId, `?LeagueName` (`league` у STRATZ бывает `null` / пустой displayName), opposingTeamId, ?opposingTeamName.
 - `History/Score` — radiantKills, direKills (≥ 0, иначе `Exception/InvalidScoreException`). `null`, если STRATZ не отдал убийства по минутам (`radiantKills` / `direKills` = null).
-- `Roster/TeamPlayer` — PlayerId, ?PlayerName, `stats: WinrateStats` — **по окну последних матчей STRATZ** (groupBy, ~100 матчей), а не за всю историю, `isCurrentMember` (`proSteamAccount.teamId` совпадает с командой).
-- `Heroes/TeamHero` — HeroId, HeroName (из `constants.heroes`), `stats: WinrateStats` по тому же окну.
+- `Roster/TeamPlayer` — PlayerId, ?PlayerName, `stats: WinrateStats` — за **всю историю** команды (groupBy с `take: TeamQuery::GROUP_BY_TAKE = 20000`), `isCurrentMember` (`proSteamAccount.teamId` совпадает с командой).
+- `Heroes/TeamHero` — HeroId, HeroName (из `constants.heroes`), `stats: WinrateStats` — тоже за всю историю команды.
 - Порт (`Stratz/Team/Port/TeamSourceInterface`): `getTeam`, `getMatchesByTeam` (последние 100), `getPlayersByTeam`, `getHeroesByTeam`. Метода «все команды» нет — источник не умеет.

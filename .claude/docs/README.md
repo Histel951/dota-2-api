@@ -2,9 +2,10 @@
 
 Symfony-бандл (`histel951/dota-2-api`, тип `symfony-bundle`) для запросов к общедоступным API по Dota 2 — **OpenDota** и **STRATZ**.
 Бандл скрывает HTTP, ретраи и формат ответов конкретного API. Наружу он отдаёт типизированные доменные сущности: матчи, команды, игроки команды, герои команды.
+Область — **про-сцена**: публичные матчи и анонимные игроки не поддерживаются (api-coverage.md → «Область бандла»).
 
 - Namespace: `Histel951\Dota2Api\` → `src/`, тесты: `Histel951\Dota2Api\Tests\` → `tests/`
-- PHP `>=8.3`, Symfony `6.4 | 7.x` (http-client, http-kernel, config, dependency-injection)
+- PHP `>=8.3`, Symfony `^7.1` (http-client, http-kernel, config, dependency-injection, rate-limiter; `ThrottlingHttpClient` — с 7.1)
 - Тесты: PHPUnit 11 (`vendor/bin/phpunit`), фикстуры в `tests/Fixtures/{opendota,stratz}/`
 - Версия: `dev-main` → `2.0-dev` (2.0 ломает совместимость с 1.x: структура, имена классов и конфиг изменены)
 - Архитектура: DDD, **источник = bounded context** (`OpenDota/`, `Stratz/`, у каждого свои Match и Team: Domain / Application / Port / Infrastructure), общий словарь игры — `SharedKernel/`, общая инфраструктура без источника — `Infrastructure/`, публичный вход — `Client/` и `Exception/`. Принципы SOLID, YAGNI, DRY, KISS
@@ -16,7 +17,7 @@ Symfony-бандл (`histel951/dota-2-api`, тип `symfony-bundle`) для за
 | Источник | Статус |
 |---|---|
 | OpenDota (REST, `https://api.opendota.com/api/`, ключ необязателен) | реализован: матчи (`getMatch`, `getMatches`), команды (`getTeams`, `getTeam`, матчи / игроки / герои команды) |
-| STRATZ (GraphQL, `https://api.stratz.com/graphql`, нужен токен `STRATZ_TOKEN`) | реализован: матчи (`getMatch`, `getMatches`), команды (`getTeam`, матчи / игроки / герои команды; списка всех команд у STRATZ нет) |
+| STRATZ (GraphQL, `https://api.stratz.com/graphql`, нужен токен `STRATZ_TOKEN`) | реализован: матчи (`getMatch`, `getMatches`; режим без `playbackData` — 5 матчей на запрос; необязательный лимитер `rate_limit`), команды (`getTeam`, матчи / игроки / герои команды; списка всех команд у STRATZ нет) |
 
 ## Потребители
 
@@ -27,9 +28,9 @@ Symfony-бандл (`histel951/dota-2-api`, тип `symfony-bundle`) для за
 
 ## Документы
 
-- [architecture.md](architecture.md) — слои и контексты, правила зависимостей, путь запроса OpenDota и STRATZ, пакетная загрузка, исключения, DI, Builder, конфиг, как добавить третий источник
-- [api-coverage.md](api-coverage.md) — методы `openDota()` и `stratz()`, что возвращают, особенности данных OpenDota и STRATZ, фикстуры
-- [domain.md](domain.md) — SharedKernel, модели OpenDota и STRATZ (матч, команды), роли OpenDota
+- [architecture.md](architecture.md) — слои и контексты, правила зависимостей, путь запроса OpenDota и STRATZ, пакетная загрузка (`ConcurrentRequests`), лимитер STRATZ, исключения, DI, Builder, конфиг, как добавить третий источник
+- [api-coverage.md](api-coverage.md) — область бандла (про-сцена), методы `openDota()` и `stratz()`, что возвращают, режим без `playbackData` и лимитер STRATZ, особенности данных OpenDota и STRATZ, фикстуры
+- [domain.md](domain.md) — SharedKernel, модели OpenDota и STRATZ (матч, команды), роли OpenDota (`position_est`)
 - [conventions.md](conventions.md) — стиль, раскладка, рецепты «новый показатель» и «новый эндпоинт» для каждого источника, тесты, поля источника
 - [known-issues.md](known-issues.md) — оставшийся технический долг и что исправлено
 - [refactoring-plan.md](refactoring-plan.md) — **исторический**: ТЗ рефакторинга 2026-10-11 (выполнено) по старой структуре (`Domain/`, провайдеры); пути и имена классов в нём устарели

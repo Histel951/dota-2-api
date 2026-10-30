@@ -73,14 +73,14 @@ VO, потом все мапперы»), а по тонким сквозным �
   `php tools/refresh-stratz-fixtures.php` (dry-run: дифф живого API с фикстурами — новые,
   пропавшие, сменившие тип ключи; STRATZ — нужен `STRATZ_TOKEN`, токен не печатать). Эндпоинта
   нет в скрипте — `curl -s https://api.opendota.com/api/<endpoint>` или GraphQL-запрос к STRATZ
-  (Bearer + `User-Agent: STRATZ_API`, лимит 150/мин). Бывает ли «обязательное» поле
+  (Bearer + `User-Agent: STRATZ_API`, лимит 150/мин, лимитер `dota2_api.stratz.rate_limit`). Бывает ли «обязательное» поле
   `null` в реальных данных (на этом уже падали `getTeams()` и `getPlayersByTeam()`). Отдаётся ли оно только у
   распарсенных матчей (OpenDota `version`, STRATZ `parsedDateTime` не null); абсолютное ли значение
   или относительно команды (OpenDota `lane` / `lane_role`, STRATZ `lane`); даёт ли его второй
   источник и одинаково ли по смыслу (кандидат в `SharedKernel` или нет);
 - **whitelist**: OpenDota — ключ матча доходит до маппера только через `MatchExtractor::PLAYER_FIELDS`;
   STRATZ — поле приходит, только если оно есть в `MatchQuery::FIELDS` / `TeamQuery`;
-- **иммутабельность**: OpenDota `MatchPlayerPerformance::withRole()` пересоздаёт все поля;
+- **иммутабельность**: сущности и VO `final readonly`, без мутаторов; роль OpenDota — только `position_est` (иначе `UNKNOWN`), эвристик нет;
 - **границы источников**: `OpenDota\*` ↔ `Stratz\*` запрещены, Match ↔ Team внутри источника тоже;
 - **два пути сборки**: DI (`Resources/config/{services,opendota,stratz}.php` + `Dota2ApiExtension`) и
   `Dota2ApiClientBuilder` (`buildOpenDota()` / `buildStratz()`);
@@ -111,7 +111,7 @@ VO, потом все мапперы»), а по тонким сквозным �
   - **Доменная модель**: новая сущность или поле существующей; в каком источнике и контексте
     (`<Source>/Match` / `<Source>/Team`) и понятии, или одинаковый по смыслу у источников VO (`SharedKernel`); что допускает `null`; инварианты и валидация.
   - **Публичный API бандла**: новый метод существующего порта (`<Source>/<Context>/Port`) или новый порт;
-    сигнатура метода клиента; нужен ли Application-сервис (как `MatchService`); одиночный запрос или пакетный (`stream()` + обёртка результата; у STRATZ — алиасы и `MatchQuery::BATCH_SIZE`).
+    сигнатура метода клиента; нужен ли Application-сервис (как `MatchService`); одиночный запрос или пакетный (общее окно `Infrastructure\Http\ConcurrentRequests` + обёртка результата; у STRATZ — алиасы и `MatchQuery::batchSize()`: с `playbackData` 1 матч на запрос, без — 5).
   - **Семантика ошибок**: исключение (`SourceRequestException` / `SourceDataException`) или
     обёртка результата, как `MatchFetchResult`; что при 404, 429, 5xx, таймауте.
   - **Конфиг**: нужны ли новые ключи `dota2_api.*` (секции `opendota`, `stratz`); deprecated-алиасы для старых.
@@ -179,14 +179,14 @@ VO, потом все мапперы»), а по тонким сквозным �
 
 - **полнота данных**: поле отсутствует, `null`, пустой массив; нераспарсенный матч
   (OpenDota `version = null`, STRATZ `parsedDateTime = null`, `playbackData = null`); анонимный
-  игрок (`account_id` / `steamAccountId = null`, см. `known-issues.md`);
+  игрок (`account_id` / `steamAccountId = null`, вне области — `api-coverage.md` → «Область бандла»);
 - **типы**: строка вместо числа, отрицательное значение, выход за границы VO → какой
   `Invalid*Exception` и как он превращается в `SourceDataException`;
 - **стороны и раскладки**: Radiant vs Dire (OpenDota: safe ↔ offlane), матч без команд, нестандартные
-  раскладки линий и их влияние на `ProSceneRoleResolver` (только OpenDota);
+  раскладки линий; OpenDota: нет/невалидный `position_est` → `UNKNOWN` у игрока;
 - **ошибки источника**: 404 / null-поле GraphQL, 403 (нет токена STRATZ), 429 (ретраи и `Retry-After`,
-  лимит STRATZ 150/мин), 5xx, таймаут, битый JSON, GraphQL `errors`;
-- **пакетная загрузка**: в `getMatches()` один матч упал (HTTP, данные, роли) — ошибка в `getError()`, остальные отдаются
+  лимит STRATZ 150/мин и `rate_limit`), 5xx, таймаут, битый JSON, GraphQL `errors`;
+- **пакетная загрузка**: в `getMatches()` один матч упал (HTTP, данные) — ошибка в `getError()`, остальные отдаются
   (STRATZ: сбой запроса — у всех id пачки); порядок
   результатов; `concurrency`;
 - **сборка**: работает и через DI, и через `Dota2ApiClientBuilder`; без токена STRATZ клиент
@@ -259,7 +259,7 @@ VO, потом все мапперы»), а по тонким сквозным �
 **Параллелизм.** Независимые срезы (разные файлы) запускай параллельно — несколько агентов в
 одном сообщении. Учитывай горячие файлы — их трогает почти любой новый показатель матча:
 OpenDota — `MatchPlayerPerformance`, `MatchExtractor`, `PlayerMapper`, `PlayerMapperTest` /
-`MatchMapperTest`, `ProSceneRoleResolverTest`; STRATZ — `MatchPlayer` / `ParsedStats`, `MatchQuery`,
+`MatchMapperTest`, `MatchDetailTest`; STRATZ — `MatchPlayer` / `ParsedStats`, `MatchQuery`,
 `PlayerMapper`, `PlayerMapperTest`, фикстуры `tests/Fixtures/stratz/match_*.json`; общие —
 `Dota2ApiClientBuilder`, `Resources/config/*.php`, `Dota2ApiExtensionTest`. Такие срезы либо вести
 последовательно, либо объединить в один.

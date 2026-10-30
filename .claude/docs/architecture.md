@@ -9,7 +9,7 @@ Dota2ApiBundle.php            — класс бандла (пустой, вся 
 DependencyInjection/          — Configuration (дерево конфига dota2_api) + Dota2ApiExtension
 Resources/config/             — services.php (Dota2ApiClient), opendota.php (граф OpenDota), stratz.php (граф STRATZ)
 Client/                       — публичная точка входа: Dota2ApiClient (openDota(), stratz()) + Dota2ApiClientBuilder (без Symfony)
-  Config/                     — ClientConfig (baseUrl, apiKey, timeout, maxRetries, options) — общий для источников
+  Config/                     — ClientConfig (baseUrl, apiKey, timeout, maxRetries, options, rateLimitPerMinute — только STRATZ) — общий для источников
 Exception/                    — публичные исключения: Dota2ApiExceptionInterface (маркер), SourceRequestException,
                                 SourceDataException
 SharedKernel/                 — словарь игры, одинаковый по смыслу у всех источников: MatchId, MatchStartTime, TeamId,
@@ -18,13 +18,13 @@ SharedKernel/                 — словарь игры, одинаковый 
                                 DraftOrder), Region/ (Region, RegionType);
                                 Exception/ — DomainException (база доменных исключений) и Invalid* этих VO
 Infrastructure/               — общее для всех источников, ничего не знает об источниках
-  Http/                       — HttpMethod (GET, POST), HttpStatusCode
+  Http/                       — HttpMethod (GET, POST), HttpStatusCode (OK, NOT_FOUND), ConcurrentRequests (окно параллельных запросов)
   Mapping/                    — AbstractMapper
 OpenDota/                     — источник OpenDota (REST)
   OpenDotaClient.php          — matches(): MatchService, teams(): TeamSourceInterface
   Match/
-    Domain/                   — MatchDetail; Player/, Player/Stats/, Side/ (MatchResult, TeamSide), Role/, Exception/
-    Application/              — MatchService (роли + обёртка ошибок), MatchFetchResult
+    Domain/                   — MatchDetail; Player/, Player/Stats/, Side/ (MatchResult, TeamSide), Exception/
+    Application/              — MatchService (обёртка ошибок, без резолвера ролей), MatchFetchResult
     Port/                     — MatchSourceInterface
   Team/
     Domain/                   — Team, TeamStats; History/, Roster/, Heroes/; Exception/
@@ -79,9 +79,8 @@ Dota2ApiClient::openDota()->matches() → OpenDota\Match\Application\MatchServic
                                  тело не JSON-массив → SourceDataException)
     → MatchExtractor::extract() (whitelist полей из огромного ответа OpenDota; нет ключа → null)
     → MatchMapper::toEntity()   (валидация, PlayerMapper/DraftMapper/LaneNormalizer; DomainException|TypeError|ValueError
-                                 → SourceDataException). Роли — из position_est или UNKNOWN
+                                 → SourceDataException). Роли — из position_est или UNKNOWN, без эвристики
   ← MatchDetail
-  → MatchDetail::withResolvedRoles(RoleResolverInterface)  (в MatchService, для каждой стороны отдельно)
   ← MatchFetchResult
 
 Dota2ApiClient::openDota()->teams() = OpenDota\Team\Port\TeamSourceInterface = OpenDotaTeamSource   (без Application-слоя)
@@ -89,17 +88,20 @@ Dota2ApiClient::openDota()->teams() = OpenDota\Team\Port\TeamSourceInterface = O
   → Team*Mapper::toEntity()/toCollection()
 ```
 
-`OpenDota\Match\Application\MatchService` — единственное место, где вызывается резолвер ролей; адаптер источника делает только HTTP и маппинг. `getMatch()` бросает `SourceRequestException` (HTTP), а ошибки данных (`SourceDataException`) и ролей (`DomainException`) возвращает в `MatchFetchResult`.
+`OpenDota\Match\Application\MatchService(MatchSourceInterface $source)` — только обёртка ошибок, резолвера ролей нет (роль ставит `PlayerMapper` из `position_est`, domain.md → «Роли»); адаптер источника делает HTTP и маппинг. `getMatch()` бросает `SourceRequestException` (HTTP), а ошибки данных (`SourceDataException`) возвращает в `MatchFetchResult`.
 
 ## Путь запроса — STRATZ
 
 ```
 Dota2ApiClient::stratz()->matches() → Stratz\Match\Application\MatchService::getMatch()/getMatches()
   → Stratz\Match\Port\MatchSourceInterface = StratzMatchSource
-    → MatchQuery::build([id])    (query Matches($m0: Long!) { m0: match(id: $m0) { ...MatchFields } } + fragment FIELDS)
+    → MatchQuery::build([id], withPlaybackData)  (query Matches($m0: Long!) { m0: match(id: $m0) { ...MatchFields } }
+                                  + fragment(): FIELDS целиком или без PLAYBACK_FIELDS)
     → GraphQlGateway::request()  (ленивый POST на base_uri, json {query, variables})
       → RetryableHttpClient      (GenericRetryStrategy: 0, 423, 425, 429, 500, 502, 503, 504, 507, 510 — POST тоже повторяется)
-        → HttpClient с base_uri = полный URL эндпоинта, timeout, User-Agent: STRATZ_API, auth_bearer = token
+        → [ThrottlingHttpClient] (только при rate_limit: sliding_window N/мин, InMemoryStorage; каждый ретрай тоже
+                                  проходит лимитер)
+          → HttpClient с base_uri = полный URL эндпоинта, timeout, User-Agent: STRATZ_API, auth_bearer = token
     → GraphQlGateway::decode()   (не-200 → SourceRequestException "API returned unexpected status code N: <errors STRATZ>";
                                   не JSON → SourceDataException; data = null + errors → SourceRequestException с текстами;
                                   ни data, ни errors / data не объект → SourceDataException)
@@ -118,19 +120,34 @@ Dota2ApiClient::stratz()->teams() = Stratz\Team\Port\TeamSourceInterface = Strat
 
 Частичный ответ GraphQL (есть и `data`, и `errors`) — не ошибка `decode()`: ошибка всплывает только у поля, которое пришло `null`. Ошибки запроса (неизвестное поле и т.п.) STRATZ отдаёт со статусом 400 — их тексты `decode()` дописывает в сообщение.
 
-`Stratz\Match\Application\MatchService(MatchSourceInterface $source)` повторяет семантику OpenDota-сервиса, но без резолвера: `getMatch()` бросает `SourceRequestException`, `SourceDataException` возвращает в `MatchFetchResult`.
+`Stratz\Match\Application\MatchService(MatchSourceInterface $source)` повторяет семантику OpenDota-сервиса: `getMatch(MatchId $id, bool $withPlaybackData = true)` бросает `SourceRequestException`, `SourceDataException` возвращает в `MatchFetchResult`; `$withPlaybackData` прокидывается в порт.
+
+**Лимитер STRATZ.** `dota2_api.stratz.rate_limit` → `ClientConfig::rateLimitPerMinute` → `StratzHttpClientFactory::create()` оборачивает клиент в `ThrottlingHttpClient` (`symfony/rate-limiter`, `sliding_window`, интервал 1 минута, id `dota2_api.stratz`) **внутри** `RetryableHttpClient`: ретрай идёт через обёрнутый клиент (`AsyncContext::replaceRequest`), поэтому каждый повтор тоже расходует лимит. Запрос сверх лимита ждёт окна, а не падает. Состояние — `InMemoryStorage` в памяти клиента, то есть лимит действует в пределах одного процесса (known-issues.md). `null` — лимитера нет. OpenDota параметр игнорирует. `ThrottlingHttpClient` появился в Symfony 7.1 — отсюда минимум бандла `^7.1`.
 
 Команды обоих источников возвращаются напрямую сущностями или списками сущностей. Ошибки — исключения `SourceRequestException` / `SourceDataException`.
 
 ## Пакетная загрузка
 
-`MatchService::getMatches(list<MatchId> $ids, int $concurrency = 5)` у обоих источников — генератор `MatchFetchResult`. Default `concurrency` задан только в сервисах.
+`MatchService::getMatches(list<MatchId> $ids, int $concurrency = 5)` у обоих источников — генератор `MatchFetchResult` (у STRATZ ещё `bool $withPlaybackData = true`). Default `concurrency` задан только в сервисах.
 
-**OpenDota.** `OpenDotaMatchSource::getMatches()` держит окно до `$concurrency` ленивых `request()` и читает их через `ApiGateway::stream()`. Запросы стартуют параллельно; результаты отдаются по готовности, порядок не гарантирован. Ответ привязан к `MatchId` через `SplObjectStorage`, поэтому дубли id не теряются. Готовый ответ → `decode()` → extract → map. Сервис резолвит роли у успешных.
+**Окно — `Infrastructure\Http\ConcurrentRequests::fetch(list $batches, int $concurrency, Closure $send, Closure $stream)`.** Общий помощник без знания источника, формата и домена. Партия (`TBatch`) — один HTTP-запрос: у OpenDota это `MatchId`, у STRATZ — `list<MatchId>`. Помощник держит до `$concurrency` ленивых запросов `$send($batch)` в полёте (`SplQueue` партий + `SplObjectStorage<ResponseInterface, TBatch>`), читает их через `$stream` (`ApiGateway::stream()` / `GraphQlGateway::stream()`) и после каждого завершения стартует следующий. Отдаёт генератор `TBatch => ResponseInterface|SourceRequestException` по готовности, порядок не гарантирован, дубли не теряются:
 
-**STRATZ.** `StratzMatchSource::getMatches()` режет id на пачки по `MatchQuery::BATCH_SIZE` (алиасы `m0`, `m1`, … в одном GraphQL-запросе) и держит окно до `$concurrency` HTTP-запросов через `GraphQlGateway::stream()` (`SplQueue` пачек + `SplObjectStorage<ResponseInterface, list<MatchId>>`). Сейчас `BATCH_SIZE = 1`: STRATZ пересобирает `playbackData` из реплея не более чем для одного незакэшированного матча за запрос, поэтому один матч — один запрос, а параллельность даёт только окно. Механизм алиасов оставлен: увеличение `BATCH_SIZE` не требует других правок. Ошибки по пачке:
+- `ResponseInterface` — тело получено, статус **не** проверен (это делает `decode()` источника);
+- `SourceRequestException` на всю партию — `$send` отверг запрос сразу (слот окна не занимается), либо ошибка клиента в потоке (`ExceptionInterface`: обрыв, таймаут, `ClientException`/`ServerException` от `RetryableHttpClient`; статус явно читается на `isFirst()`), `previous` — исходное исключение;
+- `$concurrency < 1` → `InvalidArgumentException` при первой итерации; ранний выход из генератора отменяет незавершённые запросы (`cancel()` в `finally`).
 
-- запрос отвергнут клиентом сразу, обрыв/таймаут (`TransportExceptionInterface` из чанка), ошибка `decode()` — одно и то же исключение значением **на каждый id пачки**;
+Тесты помощника — `tests/Unit/Infrastructure/Http/ConcurrentRequestsTest.php`.
+
+**OpenDota.** `OpenDotaMatchSource::getMatches()` отдаёт в `ConcurrentRequests` сами id (партия = 1 матч, `ApiGateway::request()` — ленивый GET `matches/{id}`). Готовый ответ → `decode()` → extract → map.
+
+**STRATZ.** `StratzMatchSource::getMatches()` режет id на пачки по `MatchQuery::batchSize($withPlaybackData)` (алиасы `m0`, `m1`, … в одном GraphQL-запросе) и отдаёт пачки в `ConcurrentRequests`:
+
+- с `playbackData` (по умолчанию) — `BATCH_SIZE_WITH_PLAYBACK = 1`: STRATZ пересобирает `playbackData` из реплея не более чем для одного незакэшированного матча за запрос, поэтому один матч — один запрос, параллельность даёт только окно;
+- без `playbackData` — `BATCH_SIZE = 5`, фрагмент без `PLAYBACK_FIELDS`, `ParsedStats::getBuybacks()` = `null`.
+
+Ошибки по пачке:
+
+- запрос отвергнут клиентом сразу, обрыв/таймаут, ошибка `decode()` — одно и то же исключение значением **на каждый id пачки**;
 - `field()` (алиас `null` → «Object not found») и маппинг — только у своего id (по индексу алиаса, поэтому дубли не теряются).
 
 Общее для обоих: ошибка одного матча отдаётся **значением**, поток не прерывается. Генератор источника отдаёт `MatchId => MatchDetail|SourceRequestException|SourceDataException` и сам исключений бандла не бросает. Это касается 404 (OpenDota) / пустого алиаса (STRATZ), 5xx, 429 после ретраев, обрыва и таймаута, запроса, отвергнутого клиентом сразу, битого JSON и немаппящихся данных. Сервис оборачивает каждое значение в `MatchFetchResult`.
@@ -144,7 +161,7 @@ Dota2ApiExceptionInterface (маркер, extends \Throwable) — его реа�
 ├─ Exception\SourceDataException          — тело не JSON (previous — \JsonException / DecodingException), данные не маппятся
 │                                            (previous — DomainException / TypeError / ValueError)
 └─ SharedKernel\Exception\DomainException — база всех Invalid*Exception и исключений контекстов
-                                             (OpenDota: MatchPlayersException, InvalidTeamStatsException;
+                                             (OpenDota: InvalidTeamStatsException;
                                               Stratz: InvalidMatchSideException, InvalidStunDurationException, InvalidScoreException)
 ```
 
@@ -156,11 +173,10 @@ Dota2ApiExceptionInterface (маркер, extends \Throwable) — его реа�
 |---|---|---|
 | HTTP: транспорт, 404 / матча нет у STRATZ, 403 (нет токена), 5xx, 429 после ретраев, GraphQL `errors` | бросает `SourceRequestException` | `SourceRequestException` в `getError()` |
 | Битый JSON, данные не маппятся | `SourceDataException` в `getError()` | то же |
-| Резолвер не разложил роли (только OpenDota) | `DomainException` в `getError()` (не обёрнут) | то же |
 
 ## DI
 
-`Dota2ApiExtension::load()` без ветвления: обрабатывает конфиг, ставит параметры `dota2_api.timeout`, `dota2_api.max_retries`, `dota2_api.opendota.base_url|api_key`, `dota2_api.stratz.base_url|token` и грузит три файла. Оба источника регистрируются всегда. Всё, кроме `Dota2ApiClient`, приватное.
+`Dota2ApiExtension::load()` без ветвления: обрабатывает конфиг, ставит параметры `dota2_api.timeout`, `dota2_api.max_retries`, `dota2_api.opendota.base_url|api_key`, `dota2_api.stratz.base_url|token|rate_limit` и грузит три файла. Оба источника регистрируются всегда. Всё, кроме `Dota2ApiClient`, приватное.
 
 - `services.php` — `Dota2ApiClient` (публичный, autowire `OpenDotaClient` + `StratzClient`).
 - `opendota.php`:
@@ -168,11 +184,10 @@ Dota2ApiExceptionInterface (маркер, extends \Throwable) — его реа�
   - `dota2_api.opendota.http_client` — **собственный приватный клиент**: inline `HttpClient::create()` → `OpenDotaHttpClientFactory::create()`. Глобальный `HttpClientInterface` / `http_client` приложения бандл не трогает.
   - `ApiGateway` (+алиас `ApiGatewayInterface`) поверх `dota2_api.opendota.http_client`.
   - `OpenDotaSourceFactory`; `OpenDota\Match\Port\MatchSourceInterface` и `OpenDota\Team\Port\TeamSourceInterface` — сервисы-фабрики от него (`createMatchSource` / `createTeamSource`).
-  - `RoleResolverInterface` → `PrefilledRoleResolver` с inline `ProSceneRoleResolver` в `$inner`.
-  - `OpenDota\Match\Application\MatchService` и `OpenDotaClient` — autowire.
+  - `OpenDota\Match\Application\MatchService` (только `MatchSourceInterface`, резолвера ролей нет) и `OpenDotaClient` — autowire.
 - `stratz.php`:
-  - `dota2_api.stratz.config` — `ClientConfig` из `dota2_api.stratz.base_url`, `$apiKey = dota2_api.stratz.token`, `dota2_api.timeout|max_retries`.
-  - `dota2_api.stratz.http_client` — inline `HttpClient::create()` → `StratzHttpClientFactory::create()`.
+  - `dota2_api.stratz.config` — `ClientConfig` из `dota2_api.stratz.base_url`, `$apiKey = dota2_api.stratz.token`, `$rateLimitPerMinute = dota2_api.stratz.rate_limit`, `dota2_api.timeout|max_retries`.
+  - `dota2_api.stratz.http_client` — inline `HttpClient::create()` → `StratzHttpClientFactory::create()` (`RetryableHttpClient` → `ThrottlingHttpClient`, если задан `rate_limit` → клиент).
   - `GraphQlGateway` поверх `dota2_api.stratz.http_client`.
   - `StratzSourceFactory`; `Stratz\Match\Port\MatchSourceInterface` и `Stratz\Team\Port\TeamSourceInterface` — сервисы-фабрики от него.
   - `Stratz\Match\Application\MatchService` и `StratzClient` — autowire.
@@ -183,8 +198,8 @@ Id сервисов — FQCN, поэтому одноимённые классы
 
 `new Dota2ApiClientBuilder(HttpClientInterface $client, ?ClientConfig $openDota = null, ?ClientConfig $stratz = null)` собирает тот же граф руками для использования без Symfony:
 
-- OpenDota: `OpenDotaHttpClientFactory::create()` → `ApiGateway` → `OpenDotaSourceFactory` → `OpenDotaClient(MatchService(createMatchSource(), PrefilledRoleResolver(ProSceneRoleResolver)), createTeamSource())`. Без конфига — `ClientConfig(OpenDotaHttpClientFactory::DEFAULT_BASE_URL)`.
-- STRATZ: `StratzHttpClientFactory::create()` → `GraphQlGateway` → `StratzSourceFactory` → `StratzClient(MatchService(createMatchSource()), createTeamSource())`. Без конфига — `ClientConfig(StratzHttpClientFactory::DEFAULT_BASE_URL)` без токена: клиент собирается, но запросы получат 403 → `SourceRequestException`.
+- OpenDota: `OpenDotaHttpClientFactory::create()` → `ApiGateway` → `OpenDotaSourceFactory` → `OpenDotaClient(MatchService(createMatchSource()), createTeamSource())`. Без конфига — `ClientConfig(OpenDotaHttpClientFactory::DEFAULT_BASE_URL)`.
+- STRATZ: `StratzHttpClientFactory::create()` → `GraphQlGateway` → `StratzSourceFactory` → `StratzClient(MatchService(createMatchSource()), createTeamSource())`. Без конфига — `ClientConfig(StratzHttpClientFactory::DEFAULT_BASE_URL)` без токена и без лимитера: клиент собирается, но запросы получат 403 → `SourceRequestException`. Лимитер в Builder — `ClientConfig(..., rateLimitPerMinute: 140)`.
 
 `ClientConfig::apiKey` — у OpenDota query-параметр `api_key`, у STRATZ Bearer-токен.
 
@@ -215,6 +230,7 @@ dota2_api:
   stratz:
     base_url: 'https://api.stratz.com/graphql'   # StratzHttpClientFactory::DEFAULT_BASE_URL
     token: '%env(default::STRATZ_TOKEN)%'         # default null; уходит Bearer-токеном, без него STRATZ отвечает 403
+    rate_limit: ~             # запросов/мин (min 1), включая ретраи; null (default) — без лимитера; лимит на процесс
 ```
 
 Обе секции — `addDefaultsIfNotSet()`, их можно не указывать. Корневые `source`, `base_url`, `api_key` удалены: `InvalidConfigurationException` («Unrecognized option»). Выбора источника нет — оба доступны одновременно через `openDota()` и `stratz()`.
@@ -224,7 +240,7 @@ dota2_api:
 На примере источника `Foo`:
 
 1. `src/Foo/{Match,Team}/{Domain,Port}` (+ `Application`, если нужна оркестрация) — своя модель того, что источник реально отдаёт. Из `SharedKernel` берётся только то, что одинаково по смыслу (id, имена, длительность, регион Valve, сторона, KDA/GPM/XPM, драфт). Линия, роль, статистика игрока, команда — свои.
-2. `src/Foo/Infrastructure/` — транспорт (свой gateway и `FooHttpClientFactory` с `DEFAULT_BASE_URL`, если ни `ApiGateway`, ни `GraphQlGateway` не подходят — они принадлежат своим источникам и переиспользовать их нельзя), `FooSourceFactory` с `create*Source()`, адаптеры `Match/FooMatchSource`, `Team/FooTeamSource`, мапперы на `Infrastructure\Mapping\AbstractMapper`.
+2. `src/Foo/Infrastructure/` — транспорт (свой gateway и `FooHttpClientFactory` с `DEFAULT_BASE_URL`, если ни `ApiGateway`, ни `GraphQlGateway` не подходят — они принадлежат своим источникам и переиспользовать их нельзя; пакетная загрузка — через общий `Infrastructure\Http\ConcurrentRequests`), `FooSourceFactory` с `create*Source()`, адаптеры `Match/FooMatchSource`, `Team/FooTeamSource`, мапперы на `Infrastructure\Mapping\AbstractMapper`.
 3. `src/Foo/FooClient.php` — `matches()` / `teams()`.
 4. `LayerDependenciesTest::SOURCES` += `'Foo'` (слои и запреты на `OpenDota`/`Stratz` появятся автоматически).
 5. Конфиг: секция `foo` в `Configuration`, параметры `dota2_api.foo.*` в `Dota2ApiExtension::load()`, `Resources/config/foo.php` по образцу `stratz.php` и `$loader->load('foo.php')`.
@@ -232,5 +248,3 @@ dota2_api:
 7. Фикстуры `tests/Fixtures/foo/`, скрипт `tools/refresh-foo-fixtures.php`, тесты `tests/Unit/Foo/**`; docs — раздел в `api-coverage.md` и `domain.md`.
 
 Код OpenDota и STRATZ при этом не меняется.
-
-Окно параллельных запросов сейчас продублировано в `OpenDotaMatchSource` и `StratzMatchSource` (known-issues.md); у третьего потребителя его стоит вынести в общий `Infrastructure`.

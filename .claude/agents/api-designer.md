@@ -12,7 +12,7 @@ model: sonnet
 ---
 
 Ты отвечаешь за публичный контракт Symfony-бандла `histel951/dota-2-api` (PHP >= 8.3,
-Symfony 6.4 | 7.x) и за его интеграцию с внешними API: OpenDota (REST) и STRATZ (GraphQL).
+Symfony ^7.1) и за его интеграцию с внешними API: OpenDota (REST) и STRATZ (GraphQL).
 Каждый источник — свой bounded context (`src/OpenDota/`, `src/Stratz/`), они не ссылаются
 друг на друга.
 
@@ -29,17 +29,19 @@ STRATZ — `StratzTeamSource::getPlayersByTeam()`, `StratzMatchSource`, `TeamQue
 
 - Порты `<Source>/<Context>/Port/*SourceInterface` (PHPDoc с описанием эндпоинта / GraphQL-поля,
   `@return` с типом элементов списка, `@throws SourceRequestException|SourceDataException`).
-- `<Source>/Match/Application/*` — `MatchService` и `MatchFetchResult` (OpenDota: роли через
-  `MatchDetail::withResolvedRoles()` + обёртка ошибок; STRATZ: только обёртка ошибок).
+- `<Source>/Match/Application/*` — `MatchService` и `MatchFetchResult` (у обоих — только обёртка
+  ошибок, резолвера ролей нет: роль OpenDota ставит маппер из `position_est`, у STRATZ — `Position`;
+  STRATZ `MatchService` прокидывает `$withPlaybackData`).
 - Адаптеры `<Source>/Infrastructure/<Context>/<Source>*Source`. OpenDota — endpoint
   (`"teams/{id}/players"`) и `ApiGatewayInterface::get()` / `request()` / `stream()` / `decode()`.
   STRATZ — запрос из `*Query` и `GraphQlGateway::query()` / `request()` / `stream()` / `decode()` →
-  `GraphQlResult::field()`. Роли адаптер не резолвит.
+  `GraphQlResult::field()`. Пакетная загрузка обоих — через общий `Infrastructure\Http\ConcurrentRequests::fetch()`
+  (окно `$concurrency`, партия → `ResponseInterface|SourceRequestException`); свой цикл окна не пиши.
 - Запросы STRATZ `Stratz/Infrastructure/<Context>/*Query` (`MatchQuery::FIELDS` / `build()` /
-  `BATCH_SIZE`, `TeamQuery::*`) — вместе с `domain-implementer`, если меняются поля маппера.
+  `batchSize()`, `TeamQuery::*`) — вместе с `domain-implementer`, если меняются поля маппера.
 - Транспорт: `OpenDota/Infrastructure/{ApiGateway, ApiGatewayInterface, OpenDotaHttpClientFactory}`,
   `Stratz/Infrastructure/{GraphQlGateway, GraphQlResult, StratzHttpClientFactory}`; общий
-  `Infrastructure/Http/*` (`HttpMethod`, `HttpStatusCode`).
+  `Infrastructure/Http/*` (`HttpMethod`, `HttpStatusCode`, `ConcurrentRequests`).
 - Фабрики `<Source>/Infrastructure/<Source>SourceFactory` (`createMatchSource()` / `createTeamSource()`)
   — подключение мапперов. DI и Builder берут адаптеры оттуда.
 - Клиенты источников `OpenDota/OpenDotaClient`, `Stratz/StratzClient`; `Client/Dota2ApiClient`
@@ -64,8 +66,11 @@ STRATZ — `StratzTeamSource::getPlayersByTeam()`, `StratzMatchSource`, `TeamQue
   Для пакетной загрузки — ошибка значением в генераторе источника и обёртка `MatchFetchResult`
   в Application. У STRATZ сбой запроса — значением на каждый id пачки, поле/маппинг — у своего id.
 - STRATZ: заголовок `User-Agent: STRATZ_API` и Bearer ставит `StratzHttpClientFactory`; ретраи
-  POST — через явный список кодов `GenericRetryStrategy`; лимит 150 запросов/мин (троттлинга нет);
-  `MatchQuery::BATCH_SIZE = 1` из-за пересборки `playbackData` — не поднимай без проверки живьём.
+  POST — через явный список кодов `GenericRetryStrategy`; лимит STRATZ 150 запросов/мин —
+  необязательный лимитер `dota2_api.stratz.rate_limit` (`ClientConfig::rateLimitPerMinute`,
+  `ThrottlingHttpClient` внутри `RetryableHttpClient`: ретраи расходуют лимит, состояние — в памяти
+  процесса); матчей в запросе: с `playbackData` — `MatchQuery::BATCH_SIZE_WITH_PLAYBACK = 1`
+  (пересборка реплея), без — `BATCH_SIZE = 5`; не меняй без проверки живьём.
 - DI: бандл не трогает глобальный `http_client` / `HttpClientInterface` приложения — у каждого
   источника свой приватный `dota2_api.<source>.http_client`. Публичен только `Dota2ApiClient`;
   порты — сервисы-фабрики от `<Source>SourceFactory`; `MatchService` и клиенты источников —
