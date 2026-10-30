@@ -10,7 +10,8 @@ Client/                       — публичная точка входа: Dota
 Domain/
   Common/ValueObjects, Enums, Exceptions — общие VO и DomainException (база всех доменных исключений)
   Entities/Match|Team|TeamMatch|TeamPlayer|TeamHero — сущности и их VO
-  Entities/Match/Services/ProSceneRoleResolver — определение ролей 1–5
+  Entities/Match/Services/PrefilledRoleResolver — роли из position_est, иначе делегирует
+  Entities/Match/Services/ProSceneRoleResolver — эвристика ролей 1–5 (запасной вариант)
   Providers/*ProviderInterface, Providers/Results/MatchFetchResult — контракты провайдеров (порты)
   Services/RoleResolverInterface
 Infrastructure/               — общее для всех источников
@@ -51,7 +52,7 @@ Dota2ApiClient::matches()/teams()
 - `dota2_api.http_client` — **собственный приватный клиент бандла**: `HttpClient::create()` → `OpenDotaHttpClientFactory::create()`. Глобальный `HttpClientInterface` / `http_client` приложения бандл не трогает.
 - `ApiGateway` (+алиас `ApiGatewayInterface`) поверх `dota2_api.http_client`.
 - `ProviderFactory` → `OpenDotaProviderFactory` (по `source`). `MatchesProviderInterface` и `TeamProviderInterface` — сервисы-фабрики от него, автовайрятся по интерфейсу.
-- `RoleResolverInterface` → `ProSceneRoleResolver`, передаётся в `OpenDotaProviderFactory`.
+- `RoleResolverInterface` → `PrefilledRoleResolver` с inline `ProSceneRoleResolver` в `$inner`, передаётся в `OpenDotaProviderFactory`. Значение по умолчанию в фабрике (и, значит, в `Dota2ApiClientBuilder`) — тот же декоратор.
 - `Dota2ApiClient` — единственный публичный сервис, автовайрится из интерфейсов провайдеров.
 
 `Dota2ApiClientBuilder` собирает тот же граф руками (`OpenDotaHttpClientFactory` → `ApiGateway` → `OpenDotaProviderFactory`) для использования без Symfony:
