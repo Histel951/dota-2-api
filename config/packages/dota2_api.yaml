@@ -4,3 +4,6 @@ dota2_api:
   opendota:
     base_url: 'https://api.opendota.com/api/'
     api_key: '%env(default::OPENDOTA_API_KEY)%'
+  stratz:
+    base_url: 'https://api.stratz.com/graphql'
+    token: '%env(default::STRATZ_TOKEN)%'     # Bearer-токен STRATZ; без него запросы получают 403
