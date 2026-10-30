@@ -21,12 +21,12 @@ class TeamHeroMapperTest extends TestCase
     {
         $heroes = $this->mapper->toCollection($this->rows());
 
-        $this->assertCount(107, $heroes);
+        $this->assertCount(127, $heroes);
         $this->assertSame(155, $heroes[0]->getHeroId()->getValue());
         $this->assertSame('Largo', $heroes[0]->getName()->getValue());
-        $this->assertSame(13, $heroes[0]->getStats()->getGamesPlayed());
-        $this->assertSame(5, $heroes[0]->getStats()->getGamesWon());
-        $this->assertSame(38.46, $heroes[0]->getStats()->getWinrate());
+        $this->assertSame(15, $heroes[0]->getStats()->getGamesPlayed());
+        $this->assertSame(7, $heroes[0]->getStats()->getGamesWon());
+        $this->assertSame(46.67, $heroes[0]->getStats()->getWinrate());
         $this->assertSame('Kez', $heroes[1]->getName()->getValue());
     }
 

@@ -15,6 +15,7 @@ use Histel951\Dota2Api\Stratz\Infrastructure\Team\TeamHeroMapper;
 use Histel951\Dota2Api\Stratz\Infrastructure\Team\TeamMapper;
 use Histel951\Dota2Api\Stratz\Infrastructure\Team\TeamMatchMapper;
 use Histel951\Dota2Api\Stratz\Infrastructure\Team\TeamPlayerMapper;
+use Histel951\Dota2Api\Stratz\Infrastructure\Team\TeamQuery;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -53,8 +54,8 @@ class StratzTeamSourceTest extends TestCase
 
         $players = $source->getPlayersByTeam(new TeamId(8261500));
 
-        $this->assertCount(11, $players);
-        $this->assertCount(4, array_filter($players, static fn ($p): bool => $p->isCurrentMember()));
+        $this->assertCount(39, $players);
+        $this->assertCount(12, array_filter($players, static fn ($p): bool => $p->isCurrentMember()));
         $this->assertStringContainsString('"teamId":8261500', $this->bodies[0]);
     }
 
@@ -64,9 +65,27 @@ class StratzTeamSourceTest extends TestCase
 
         $heroes = $source->getHeroesByTeam(new TeamId(8261500));
 
-        $this->assertCount(107, $heroes);
+        $this->assertCount(127, $heroes);
         $this->assertSame('Largo', $heroes[0]->getName()->getValue());
         $this->assertStringContainsString('"teamId":8261500', $this->bodies[0]);
+    }
+
+    public function test_groupByQueriesRequestWholeTeamHistory()
+    {
+        $source = $this->createSource([
+            $this->fixtureResponse('team_8261500_players'),
+            $this->fixtureResponse('team_8261500_heroes'),
+        ]);
+        $take = 'take: ' . TeamQuery::GROUP_BY_TAKE . '}';
+
+        $source->getPlayersByTeam(new TeamId(8261500));
+        $source->getHeroesByTeam(new TeamId(8261500));
+
+        $this->assertSame(20000, TeamQuery::GROUP_BY_TAKE);
+        $this->assertStringContainsString('groupBy: STEAM_ACCOUNT_ID, ' . $take, TeamQuery::PLAYERS);
+        $this->assertStringContainsString('groupBy: HERO, ' . $take, TeamQuery::HEROES);
+        $this->assertStringContainsString($take, json_decode($this->bodies[0], true)['query']);
+        $this->assertStringContainsString($take, json_decode($this->bodies[1], true)['query']);
     }
 
     public function test_teamIdVariableIsIntegerNotString()
