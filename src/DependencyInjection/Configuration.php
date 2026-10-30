@@ -3,7 +3,8 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
-use Histel951\Dota2Api\Client\Config\ApiSource;
+use Histel951\Dota2Api\OpenDota\Infrastructure\OpenDotaHttpClientFactory;
+use Histel951\Dota2Api\Stratz\Infrastructure\StratzHttpClientFactory;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -15,11 +16,6 @@ final class Configuration implements ConfigurationInterface
 
         $treeBuilder->getRootNode()
             ->children()
-            ->enumNode('source')
-            ->values(array_map(static fn (ApiSource $source): string => $source->value, ApiSource::cases()))
-            ->defaultValue(ApiSource::OPENDOTA->value)
-            ->end()
-
             ->integerNode('timeout')
             ->defaultValue(30)
             ->end()
@@ -33,7 +29,7 @@ final class Configuration implements ConfigurationInterface
             ->addDefaultsIfNotSet()
             ->children()
             ->scalarNode('base_url')
-            ->defaultValue('https://api.opendota.com/api/')
+            ->defaultValue(OpenDotaHttpClientFactory::DEFAULT_BASE_URL)
             ->end()
             ->scalarNode('api_key')
             ->defaultNull()
@@ -41,12 +37,16 @@ final class Configuration implements ConfigurationInterface
             ->end()
             ->end()
 
+            ->arrayNode('stratz')
+            ->addDefaultsIfNotSet()
+            ->children()
             ->scalarNode('base_url')
-            ->setDeprecated('histel951/dota-2-api', '1.1', 'The "%node%" option is deprecated, use "opendota.base_url" instead.')
+            ->defaultValue(StratzHttpClientFactory::DEFAULT_BASE_URL)
             ->end()
-
-            ->scalarNode('api_key')
-            ->setDeprecated('histel951/dota-2-api', '1.1', 'The "%node%" option is deprecated, use "opendota.api_key" instead.')
+            ->scalarNode('token')
+            ->defaultNull()
+            ->end()
+            ->end()
             ->end()
             ->end();
 

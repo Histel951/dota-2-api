@@ -3,25 +3,25 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Client;
 
-use Histel951\Dota2Api\Match\Application\MatchService;
-use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
+use Histel951\Dota2Api\OpenDota\OpenDotaClient;
+use Histel951\Dota2Api\Stratz\StratzClient;
 
 final readonly class Dota2ApiClient
 {
     public function __construct(
-        private MatchService $matches,
-        private TeamSourceInterface $teams,
+        private OpenDotaClient $openDota,
+        private StratzClient $stratz,
     )
     {
     }
 
-    public function matches(): MatchService
+    public function openDota(): OpenDotaClient
     {
-        return $this->matches;
+        return $this->openDota;
     }
 
-    public function teams(): TeamSourceInterface
+    public function stratz(): StratzClient
     {
-        return $this->teams;
+        return $this->stratz;
     }
 }

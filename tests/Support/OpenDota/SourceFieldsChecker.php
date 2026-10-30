@@ -3,12 +3,12 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Support\OpenDota;
 
-use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamPlayerMapper;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Match\MatchExtractor;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Match\MatchMapper;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Team\TeamHeroMapper;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Team\TeamMapper;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Team\TeamMatchMapper;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Team\TeamPlayerMapper;
 use LogicException;
 use ReflectionClass;
 

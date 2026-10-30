@@ -10,26 +10,29 @@ use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\ParserFactory;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 
 /**
  * Проверяет правила зависимостей между слоями бандла по всем ссылкам на классы в src/.
+ *
+ * Слои источника S (OpenDota, Stratz) и контекста C (Match, Team) задаются статически: S\C\Domain, S\C\Port,
+ * S\C\Application, S\Infrastructure и клиент источника S\<S>Client.
  */
 final class LayerDependenciesTest extends TestCase
 {
     private const ROOT = 'Histel951\\Dota2Api\\';
 
-    /** Префикс (после корневого namespace) => слой. Берётся самый длинный совпавший префикс. */
-    private const LAYERS = [
+    private const SOURCES = ['OpenDota', 'Stratz'];
+
+    private const CONTEXTS = ['Match', 'Team'];
+
+    /** Общие слои вне источников. */
+    private const COMMON_LAYERS = [
         'SharedKernel',
         'Exception',
-        'Match\\Domain',
-        'Match\\Port',
-        'Match\\Application',
-        'Team\\Domain',
-        'Team\\Port',
         'Infrastructure',
         'Client\\Config',
         'Client',
@@ -41,21 +44,13 @@ final class LayerDependenciesTest extends TestCase
     /** Composition root: без ограничений на исходящие зависимости. */
     private const UNRESTRICTED = ['Client', 'Client\\Config', 'DependencyInjection', 'Resources', 'Dota2ApiBundle'];
 
-    /** Слой => разрешённые целевые слои (белый список). SharedKernel обрабатывается отдельно. */
-    private const ALLOWED = [
-        'Exception' => [],
-        'Match\\Domain' => ['SharedKernel'],
-        'Team\\Domain' => ['SharedKernel'],
-        'Match\\Port' => ['Match\\Domain', 'SharedKernel', 'Exception'],
-        'Team\\Port' => ['Team\\Domain', 'SharedKernel', 'Exception'],
-        'Match\\Application' => ['Match\\Domain', 'Match\\Port', 'SharedKernel', 'Exception'],
-    ];
-
-    /** Infrastructure: разрешено всё, кроме перечисленного (Client\Config разрешён). */
-    private const INFRASTRUCTURE_FORBIDDEN = ['Match\\Application', 'Client', 'DependencyInjection', 'Resources', 'Dota2ApiBundle'];
-
     /** SharedKernel может ссылаться только на этот класс вне себя. */
     private const SHARED_KERNEL_ONLY = 'Histel951\\Dota2Api\\Exception\\Dota2ApiExceptionInterface';
+
+    public static function sourceProvider(): array
+    {
+        return ['OpenDota' => ['OpenDota'], 'Stratz' => ['Stratz']];
+    }
 
     public function test_srcFollowsLayerDependencyRules(): void
     {
@@ -78,89 +73,149 @@ final class LayerDependenciesTest extends TestCase
         self::assertSame([], $violations, "Нарушения правил слоёв:\n" . implode("\n", $violations));
     }
 
-    public function test_detectsDomainDependingOnInfrastructure(): void
+    #[DataProvider('sourceProvider')]
+    public function test_detectsDomainDependingOnInfrastructure(string $source): void
     {
-        $code = <<<'PHP'
+        $code = <<<PHP
             <?php
-            namespace Histel951\Dota2Api\Match\Domain\Foo;
-            use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
-            final class Foo { public function __construct(private ApiGateway $gateway) {} }
+            namespace Histel951\\Dota2Api\\{$source}\\Match\\Domain\\Foo;
+            use Histel951\\Dota2Api\\{$source}\\Infrastructure\\ApiGateway;
+            final class Foo { public function __construct(private ApiGateway \$gateway) {} }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Match\\Domain\\Foo\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, "Histel951\\Dota2Api\\{$source}\\Match\\Domain\\Foo\\Foo", 'Foo.php');
 
-        self::assertContains('Foo.php:3 Match\\Domain → Histel951\\Dota2Api\\Infrastructure\\Http\\ApiGateway', $violations);
+        self::assertContains("Foo.php:3 {$source}\\Match\\Domain → Histel951\\Dota2Api\\{$source}\\Infrastructure\\ApiGateway", $violations);
     }
 
     public function test_detectsFullyQualifiedReferenceWithoutUseStatement(): void
     {
         $code = <<<'PHP'
             <?php
-            namespace Histel951\Dota2Api\Match\Domain;
-            final class Foo { public function run(): void { new \Histel951\Dota2Api\Infrastructure\Http\ApiGateway(); } }
+            namespace Histel951\Dota2Api\OpenDota\Match\Domain;
+            final class Foo { public function run(): void { new \Histel951\Dota2Api\OpenDota\Infrastructure\ApiGateway(); } }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Match\\Domain\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\Match\\Domain\\Foo', 'Foo.php');
 
-        self::assertSame(['Foo.php:3 Match\\Domain → Histel951\\Dota2Api\\Infrastructure\\Http\\ApiGateway'], $violations);
+        self::assertSame(['Foo.php:3 OpenDota\\Match\\Domain → Histel951\\Dota2Api\\OpenDota\\Infrastructure\\ApiGateway'], $violations);
     }
 
-    public function test_detectsMatchDependingOnTeam(): void
+    #[DataProvider('sourceProvider')]
+    public function test_detectsMatchDependingOnTeam(string $source): void
     {
-        $code = <<<'PHP'
+        $code = <<<PHP
             <?php
-            namespace Histel951\Dota2Api\Match\Port;
-            use Histel951\Dota2Api\Team\Domain\Team;
+            namespace Histel951\\Dota2Api\\{$source}\\Match\\Port;
+            use Histel951\\Dota2Api\\{$source}\\Team\\Domain\\Team;
             interface Foo { public function team(): Team; }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Match\\Port\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, "Histel951\\Dota2Api\\{$source}\\Match\\Port\\Foo", 'Foo.php');
 
-        self::assertContains('Foo.php:3 Match\\Port → Histel951\\Dota2Api\\Team\\Domain\\Team', $violations);
+        self::assertContains("Foo.php:3 {$source}\\Match\\Port → Histel951\\Dota2Api\\{$source}\\Team\\Domain\\Team", $violations);
     }
 
-    public function test_detectsTeamDependingOnMatch(): void
+    #[DataProvider('sourceProvider')]
+    public function test_detectsTeamDependingOnMatch(string $source): void
     {
-        $code = <<<'PHP'
+        $code = <<<PHP
             <?php
-            namespace Histel951\Dota2Api\Team\Port;
-            use Histel951\Dota2Api\Match\Domain\Match;
+            namespace Histel951\\Dota2Api\\{$source}\\Team\\Port;
+            use Histel951\\Dota2Api\\{$source}\\Match\\Domain\\Match;
             interface Foo { public function match(): MatchRecord; }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Team\\Port\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, "Histel951\\Dota2Api\\{$source}\\Team\\Port\\Foo", 'Foo.php');
 
-        self::assertContains('Foo.php:3 Team\\Port → Histel951\\Dota2Api\\Match\\Domain\\Match', $violations);
+        self::assertContains("Foo.php:3 {$source}\\Team\\Port → Histel951\\Dota2Api\\{$source}\\Match\\Domain\\Match", $violations);
     }
 
-    public function test_detectsInfrastructureDependingOnMatchApplication(): void
+    public function test_detectsOpenDotaDependingOnStratz(): void
     {
         $code = <<<'PHP'
             <?php
-            namespace Histel951\Dota2Api\Infrastructure\OpenDota\Match;
-            use Histel951\Dota2Api\Match\Application\MatchService;
-            final class Foo { public function __construct(private MatchService $service) {} }
+            namespace Histel951\Dota2Api\OpenDota\Match\Application;
+            use Histel951\Dota2Api\Stratz\Match\Domain\MatchDetail;
+            final class Foo { public function m(): MatchDetail {} }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Infrastructure\\OpenDota\\Match\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\Match\\Application\\Foo', 'Foo.php');
 
-        self::assertContains('Foo.php:3 Infrastructure → Histel951\\Dota2Api\\Match\\Application\\MatchService', $violations);
+        self::assertContains('Foo.php:3 OpenDota\\Match\\Application → Histel951\\Dota2Api\\Stratz\\Match\\Domain\\MatchDetail', $violations);
     }
 
-    public function test_detectsInfrastructureDependingOnClientOtherThanConfig(): void
+    public function test_detectsStratzDependingOnOpenDota(): void
     {
         $code = <<<'PHP'
             <?php
-            namespace Histel951\Dota2Api\Infrastructure\Http;
+            namespace Histel951\Dota2Api\Stratz\Match\Port;
+            use Histel951\Dota2Api\OpenDota\Match\Domain\MatchDetail;
+            interface Foo { public function m(): MatchDetail; }
+            PHP;
+
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\Match\\Port\\Foo', 'Foo.php');
+
+        self::assertContains('Foo.php:3 Stratz\\Match\\Port → Histel951\\Dota2Api\\OpenDota\\Match\\Domain\\MatchDetail', $violations);
+    }
+
+    #[DataProvider('sourceProvider')]
+    public function test_detectsSourceInfrastructureDependingOnOwnApplication(string $source): void
+    {
+        $code = <<<PHP
+            <?php
+            namespace Histel951\\Dota2Api\\{$source}\\Infrastructure\\Match;
+            use Histel951\\Dota2Api\\{$source}\\Match\\Application\\MatchService;
+            final class Foo { public function __construct(private MatchService \$service) {} }
+            PHP;
+
+        $violations = $this->analyze($code, "Histel951\\Dota2Api\\{$source}\\Infrastructure\\Match\\Foo", 'Foo.php');
+
+        self::assertContains("Foo.php:3 {$source}\\Infrastructure → Histel951\\Dota2Api\\{$source}\\Match\\Application\\MatchService", $violations);
+    }
+
+    public function test_detectsSourceInfrastructureDependingOnClientOtherThanConfig(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\OpenDota\Infrastructure;
             use Histel951\Dota2Api\Client\Dota2Client;
             use Histel951\Dota2Api\Client\Config\Dota2ClientConfig;
             final class Foo { public function __construct(Dota2ClientConfig $cfg) { new Dota2Client(); } }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Infrastructure\\Http\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\Infrastructure\\Foo', 'Foo.php');
 
-        self::assertContains('Foo.php:3 Infrastructure → Histel951\Dota2Api\Client\Dota2Client', $violations);
+        self::assertContains('Foo.php:3 OpenDota\\Infrastructure → Histel951\Dota2Api\Client\Dota2Client', $violations);
         self::assertCount(2, $violations);
+    }
+
+    public function test_detectsCommonInfrastructureDependingOnSource(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Infrastructure\Mapping;
+            use Histel951\Dota2Api\OpenDota\Infrastructure\ApiGateway;
+            final class Foo { public function __construct(private ApiGateway $gateway) {} }
+            PHP;
+
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Infrastructure\\Mapping\\Foo', 'Foo.php');
+
+        self::assertContains('Foo.php:3 Infrastructure → Histel951\\Dota2Api\\OpenDota\\Infrastructure\\ApiGateway', $violations);
+    }
+
+    public function test_detectsSourceClientDependingOnInfrastructure(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\OpenDota;
+            use Histel951\Dota2Api\OpenDota\Infrastructure\ApiGateway;
+            final class OpenDotaClient { public function __construct(private ApiGateway $gateway) {} }
+            PHP;
+
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\OpenDotaClient', 'OpenDotaClient.php');
+
+        self::assertContains('OpenDotaClient.php:3 OpenDota\\OpenDotaClient → Histel951\\Dota2Api\\OpenDota\\Infrastructure\\ApiGateway', $violations);
     }
 
     public function test_detectsSharedKernelDependingOnMatch(): void
@@ -168,13 +223,13 @@ final class LayerDependenciesTest extends TestCase
         $code = <<<'PHP'
             <?php
             namespace Histel951\Dota2Api\SharedKernel;
-            use Histel951\Dota2Api\Match\Domain\Match;
+            use Histel951\Dota2Api\OpenDota\Match\Domain\Match;
             final class Foo { public function m(): MatchRecord {} }
             PHP;
 
         $violations = $this->analyze($code, 'Histel951\\Dota2Api\\SharedKernel\\Foo', 'Foo.php');
 
-        self::assertContains('Foo.php:3 SharedKernel → Histel951\\Dota2Api\\Match\\Domain\\Match', $violations);
+        self::assertContains('Foo.php:3 SharedKernel → Histel951\\Dota2Api\\OpenDota\\Match\\Domain\\Match', $violations);
     }
 
     public function test_sharedKernelMayReferenceOnlyDota2ApiExceptionInterface(): void
@@ -203,30 +258,89 @@ final class LayerDependenciesTest extends TestCase
     {
         $code = <<<'PHP'
             <?php
-            namespace Histel951\Dota2Api\Match\Domain;
+            namespace Histel951\Dota2Api\OpenDota\Match\Domain;
             use Histel951\Dota2Api\Brand\NewThing\Thing;
             final class Foo { public function t(): Thing {} }
             PHP;
 
-        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Match\\Domain\\Foo', 'Foo.php');
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\Match\\Domain\\Foo', 'Foo.php');
 
-        self::assertContains('Foo.php:3 Match\\Domain → Histel951\\Dota2Api\\Brand\\NewThing\\Thing (слой цели не определён)', $violations);
+        self::assertContains('Foo.php:3 OpenDota\\Match\\Domain → Histel951\\Dota2Api\\Brand\\NewThing\\Thing (слой цели не определён)', $violations);
     }
 
     public function test_allowsPermittedDependenciesAndSelf(): void
     {
         $code = <<<'PHP'
             <?php
-            namespace Histel951\Dota2Api\Match\Application;
-            use Histel951\Dota2Api\Match\Domain\Match;
-            use Histel951\Dota2Api\Match\Port\MatchSource;
+            namespace Histel951\Dota2Api\OpenDota\Match\Application;
+            use Histel951\Dota2Api\OpenDota\Match\Domain\Match;
+            use Histel951\Dota2Api\OpenDota\Match\Port\MatchSource;
             use Histel951\Dota2Api\SharedKernel\Foo;
             use Histel951\Dota2Api\Exception\ApiGatewayException;
-            use Histel951\Dota2Api\Match\Application\Other;
+            use Histel951\Dota2Api\OpenDota\Match\Application\Other;
             final class Svc { public function __construct(MatchRecord $m, MatchSource $s, Foo $f, Other $o, \Throwable $t) {} }
             PHP;
 
-        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\Match\\Application\\Svc', 'Svc.php'));
+        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\Match\\Application\\Svc', 'Svc.php'));
+    }
+
+    public function test_allowsSourceInfrastructureOnCommonInfrastructureAndClientConfig(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Stratz\Infrastructure;
+            use Histel951\Dota2Api\Client\Config\ClientConfig;
+            use Histel951\Dota2Api\Exception\SourceDataException;
+            use Histel951\Dota2Api\Infrastructure\Http\HttpMethod;
+            use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
+            use Histel951\Dota2Api\SharedKernel\MatchId;
+            use Histel951\Dota2Api\Stratz\Match\Domain\MatchDetail;
+            use Histel951\Dota2Api\Stratz\Match\Port\MatchSourceInterface;
+            use Histel951\Dota2Api\Stratz\Team\Port\TeamSourceInterface;
+            final class Foo { public function __construct(ClientConfig $c, AbstractMapper $m, HttpMethod $h, MatchId $id) {} }
+            PHP;
+
+        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\Infrastructure\\Foo', 'Foo.php'));
+    }
+
+    public function test_allowsSourceClientOnOwnApplicationAndPort(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\OpenDota;
+            use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
+            use Histel951\Dota2Api\OpenDota\Team\Port\TeamSourceInterface;
+            final class OpenDotaClient { public function __construct(MatchService $m, TeamSourceInterface $t) {} }
+            PHP;
+
+        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\OpenDotaClient', 'OpenDotaClient.php'));
+    }
+
+    public function test_detectsStratzClientDependingOnInfrastructure(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Stratz;
+            use Histel951\Dota2Api\Stratz\Infrastructure\GraphQlGateway;
+            final class StratzClient { public function __construct(private GraphQlGateway $gateway) {} }
+            PHP;
+
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\StratzClient', 'StratzClient.php');
+
+        self::assertContains('StratzClient.php:3 Stratz\\StratzClient → Histel951\\Dota2Api\\Stratz\\Infrastructure\\GraphQlGateway', $violations);
+    }
+
+    public function test_allowsStratzClientOnOwnApplicationAndPort(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Stratz;
+            use Histel951\Dota2Api\Stratz\Match\Application\MatchService;
+            use Histel951\Dota2Api\Stratz\Team\Port\TeamSourceInterface;
+            final class StratzClient { public function __construct(MatchService $m, TeamSourceInterface $t) {} }
+            PHP;
+
+        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\StratzClient', 'StratzClient.php'));
     }
 
     /**
@@ -260,14 +374,59 @@ final class LayerDependenciesTest extends TestCase
 
     private function isAllowed(string $layer, string $targetLayer, string $target): bool
     {
-        if ('Infrastructure' === $layer) {
-            return !in_array($targetLayer, self::INFRASTRUCTURE_FORBIDDEN, true);
-        }
         if ('SharedKernel' === $layer) {
             return self::SHARED_KERNEL_ONLY === $target;
         }
 
-        return in_array($targetLayer, self::ALLOWED[$layer], true);
+        return in_array($targetLayer, self::allowedTargets()[$layer] ?? [], true);
+    }
+
+    /**
+     * Слой => разрешённые целевые слои (белый список). SharedKernel обрабатывается отдельно.
+     *
+     * @return array<string, list<string>>
+     */
+    private static function allowedTargets(): array
+    {
+        $allowed = [
+            'Exception' => [],
+            'Infrastructure' => ['SharedKernel', 'Exception'],
+        ];
+
+        foreach (self::SOURCES as $s) {
+            $infrastructure = ['SharedKernel', 'Exception', 'Infrastructure', 'Client\\Config'];
+            $client = [];
+            foreach (self::CONTEXTS as $c) {
+                $allowed["$s\\$c\\Domain"] = ['SharedKernel'];
+                $allowed["$s\\$c\\Port"] = ["$s\\$c\\Domain", 'SharedKernel', 'Exception'];
+                $allowed["$s\\$c\\Application"] = ["$s\\$c\\Domain", "$s\\$c\\Port", 'SharedKernel', 'Exception'];
+                array_push($infrastructure, "$s\\$c\\Domain", "$s\\$c\\Port");
+                array_push($client, "$s\\$c\\Application", "$s\\$c\\Port");
+            }
+            $allowed["$s\\Infrastructure"] = $infrastructure;
+            $allowed["$s\\{$s}Client"] = $client;
+        }
+
+        return $allowed;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function layers(): array
+    {
+        $layers = self::COMMON_LAYERS;
+        foreach (self::SOURCES as $s) {
+            $layers[] = "$s\\Infrastructure";
+            $layers[] = "$s\\{$s}Client";
+            foreach (self::CONTEXTS as $c) {
+                foreach (['Domain', 'Port', 'Application'] as $part) {
+                    $layers[] = "$s\\$c\\$part";
+                }
+            }
+        }
+
+        return $layers;
     }
 
     private function layerOf(string $fqcn): ?string
@@ -277,7 +436,7 @@ final class LayerDependenciesTest extends TestCase
         }
         $rest = substr($fqcn, strlen(self::ROOT));
         $best = null;
-        foreach (self::LAYERS as $prefix) {
+        foreach (self::layers() as $prefix) {
             if (($rest === $prefix || str_starts_with($rest, $prefix . '\\')) && (null === $best || strlen($prefix) > strlen($best))) {
                 $best = $prefix;
             }

@@ -1,7 +1,9 @@
 dota2_api:
-  source: opendota          # opendota | stratz (stratz пока не реализован)
   timeout: 60
   max_retries: 3            # повторы для 429/5xx и транспортных ошибок
   opendota:
     base_url: 'https://api.opendota.com/api/'
     api_key: '%env(default::OPENDOTA_API_KEY)%'
+  stratz:
+    base_url: 'https://api.stratz.com/graphql'
+    token: '%env(default::STRATZ_TOKEN)%'     # Bearer-токен STRATZ; без него запросы получают 403

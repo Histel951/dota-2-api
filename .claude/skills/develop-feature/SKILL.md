@@ -7,7 +7,7 @@ description: >-
   финальная проверка. Запускай всегда, когда пользователь хочет спроектировать,
   обсудить, спланировать или реализовать новую фичу или заметное изменение
   поведения — новый показатель матча/игрока, новый эндпоинт или метод клиента,
-  новую сущность, новый источник (STRATZ), изменение конфига бандла — даже если он
+  новую сущность, новый источник, изменение конфига бандла — даже если он
   не называет скилл явно. Триггеры: «давай сделаем фичу», «нужно реализовать»,
   «хочу добавить», «добавь показатель/поле в статистику», «добавь эндпоинт»,
   «давай обсудим и реализуем», «спланируй и сделай». Не для однострочных правок и
@@ -31,8 +31,9 @@ description: >-
 Ключевая идея реализации — **вертикальные срезы**. Работа режется не по слоям («сначала все
 VO, потом все мапперы»), а по тонким сквозным кусочкам: каждый доводит одну проверяемую
 способность через все слои — домен → маппинг источника → порт/источник/Application/DI → тесты.
-Пример: «показатель `camps_stacked` у игрока матча» — один срез (VO + группа статистики +
-`MatchExtractor` + `PlayerMapper` + тест на фикстуре). Срез — единица параллелизма, проверки и
+Пример: «показатель `camps_stacked` у игрока матча OpenDota» — один срез (VO + группа статистики +
+`MatchExtractor` + `PlayerMapper` + тест на фикстуре); у STRATZ — VO + `ParsedStats` +
+`MatchQuery::FIELDS` + `PlayerMapper` + перезаписанная фикстура + тест. Срез — единица параллелизма, проверки и
 коммита: независимые срезы реализуются параллельно, каждый проверяется по готовности и
 сразу коммитится.
 
@@ -60,25 +61,31 @@ VO, потом все мапперы»), а по тонким сквозным �
 **Собери контекст, который уже есть** — не спрашивай о том, что задокументировано:
 
 - `.claude/docs/README.md` и из него нужные документы: `architecture.md`, `domain.md`,
-  `conventions.md` (рецепты «новый показатель» и «новый эндпоинт»), `api-coverage.md`
-  (что покрыто и особенности данных OpenDota), `known-issues.md` (долг в затронутой области).
+  `conventions.md` (рецепты «новый показатель» и «новый эндпоинт» для каждого источника),
+  `api-coverage.md` (что покрыто и особенности данных OpenDota и STRATZ), `known-issues.md` (долг в затронутой области).
 - Код затронутой области — сам или через Explore-агента.
 
 Широкий обзор легко упускает периферию. Перед тем как считать карту полной, явно проверь
 то, что в этом бандле пропускают чаще всего:
 
 - **данные источника**: есть ли поле в реальном ответе и какого оно типа — смотри фикстуры
-  `tests/Fixtures/opendota/*.json` и `php tools/refresh-opendota-fixtures.php` (dry-run: дифф
-  живого OpenDota с фикстурами — новые, пропавшие, сменившие тип ключи). Эндпоинта нет в
-  скрипте — `curl -s https://api.opendota.com/api/<endpoint>`. Бывает ли «обязательное» поле
+  `tests/Fixtures/{opendota,stratz}/*.json` и `php tools/refresh-opendota-fixtures.php` /
+  `php tools/refresh-stratz-fixtures.php` (dry-run: дифф живого API с фикстурами — новые,
+  пропавшие, сменившие тип ключи; STRATZ — нужен `STRATZ_TOKEN`, токен не печатать). Эндпоинта
+  нет в скрипте — `curl -s https://api.opendota.com/api/<endpoint>` или GraphQL-запрос к STRATZ
+  (Bearer + `User-Agent: STRATZ_API`, лимит 150/мин). Бывает ли «обязательное» поле
   `null` в реальных данных (на этом уже падали `getTeams()` и `getPlayersByTeam()`). Отдаётся ли оно только у
-  распарсенных матчей (`version` не null); абсолютное ли значение или относительно команды
-  (как `lane` / `lane_role`);
-- **whitelist**: ключ матча доходит до маппера только через `MatchExtractor::PLAYER_FIELDS`;
-- **иммутабельность**: `MatchPlayerPerformance::withRole()` пересоздаёт все поля;
-- **два пути сборки**: DI (`services.php` + `Dota2ApiExtension`) и `Dota2ApiClientBuilder`;
+  распарсенных матчей (OpenDota `version`, STRATZ `parsedDateTime` не null); абсолютное ли значение
+  или относительно команды (OpenDota `lane` / `lane_role`, STRATZ `lane`); даёт ли его второй
+  источник и одинаково ли по смыслу (кандидат в `SharedKernel` или нет);
+- **whitelist**: OpenDota — ключ матча доходит до маппера только через `MatchExtractor::PLAYER_FIELDS`;
+  STRATZ — поле приходит, только если оно есть в `MatchQuery::FIELDS` / `TeamQuery`;
+- **иммутабельность**: OpenDota `MatchPlayerPerformance::withRole()` пересоздаёт все поля;
+- **границы источников**: `OpenDota\*` ↔ `Stratz\*` запрещены, Match ↔ Team внутри источника тоже;
+- **два пути сборки**: DI (`Resources/config/{services,opendota,stratz}.php` + `Dota2ApiExtension`) и
+  `Dota2ApiClientBuilder` (`buildOpenDota()` / `buildStratz()`);
 - **потребители**: `../../dota2-analytical-service/symfony` (автовайрит `Dota2ApiClient`,
-  старый формат конфига) и `../test` (Builder); оба под 1.x, 2.0 их импорты уже ломает. Точечный `grep` по
+  старый формат конфига — с 2.0 не собирается) и `../test` (Builder); оба под 1.x, 2.0 их уже ломает. Точечный `grep` по
   затрагиваемому публичному классу/методу в них — дешёвая страховка от ломающего изменения.
 
 Делай сбор тихо и быстро, затем переходи к вопросам.
@@ -99,14 +106,15 @@ VO, потом все мапперы»), а по тонким сквозным �
   показателя, что делать, если источник его не отдаёт (0 / `null` / ошибка), — и хватит.
 - Крупная или неоднозначная фича — закрой релевантные темы:
   - **Зачем**: какой потребитель и сценарий (аналитика в `dota2-analytical-service`, бот и т.п.).
-  - **Источник**: OpenDota, STRATZ или оба; конкретные эндпоинты и поля; лимиты и ключи.
-  - **Доменная модель**: новая сущность или поле существующей; в каком контексте (Match / Team) и
-    понятии, или реально общий VO (`SharedKernel`); что допускает `null`; инварианты и валидация.
-  - **Публичный API бандла**: новый метод существующего порта (`<Context>/Port`) или новый порт;
-    сигнатура метода клиента; нужен ли Application-сервис (как `MatchService`); одиночный запрос или пакетный (`stream()` + обёртка результата).
+  - **Источник**: OpenDota, STRATZ или оба (у каждого своя модель — реализуется отдельно в каждом);
+    конкретные эндпоинты / GraphQL-поля; лимиты и ключи/токены.
+  - **Доменная модель**: новая сущность или поле существующей; в каком источнике и контексте
+    (`<Source>/Match` / `<Source>/Team`) и понятии, или одинаковый по смыслу у источников VO (`SharedKernel`); что допускает `null`; инварианты и валидация.
+  - **Публичный API бандла**: новый метод существующего порта (`<Source>/<Context>/Port`) или новый порт;
+    сигнатура метода клиента; нужен ли Application-сервис (как `MatchService`); одиночный запрос или пакетный (`stream()` + обёртка результата; у STRATZ — алиасы и `MatchQuery::BATCH_SIZE`).
   - **Семантика ошибок**: исключение (`SourceRequestException` / `SourceDataException`) или
     обёртка результата, как `MatchFetchResult`; что при 404, 429, 5xx, таймауте.
-  - **Конфиг**: нужны ли новые ключи `dota2_api.*`; deprecated-алиасы для старых.
+  - **Конфиг**: нужны ли новые ключи `dota2_api.*` (секции `opendota`, `stratz`); deprecated-алиасы для старых.
   - **Совместимость**: ломается ли что-то у потребителей; допустима ли новая major-версия.
 
 **Останавливайся, когда задача понятна** — когда ТЗ формулируется без догадок по существу.
@@ -131,7 +139,7 @@ VO, потом все мапперы»), а по тонким сквозным �
 Зачем фича, кто потребитель, что меняется в том, что отдаёт бандл.
 
 ## Слои и источник
-Какие контексты и слои затрагиваются (<Context>/Domain|Application|Port / SharedKernel / Infrastructure/<Source>/<Context> / Client / DI) и какой источник.
+Какие контексты и слои затрагиваются (<Source>/<Context>/Domain|Application|Port / SharedKernel / <Source>/Infrastructure/<Context> / общий Infrastructure / Client / DI) и какой источник.
 
 ## Доменная модель
 Новые/изменённые сущности, VO, enums, исключения, инварианты, nullable-поля.
@@ -153,7 +161,7 @@ VO, потом все мапперы»), а по тонким сквозным �
 
 ## Разбивка на вертикальные срезы
 Сначала **фундамент (слой 0)** — то, от чего зависят несколько срезов и что само срезом не
-является (общий VO в `SharedKernel`, новая сущность, новый метод `ApiGateway`). Он
+является (общий VO в `SharedKernel`, новая сущность, новый метод `ApiGateway` / `GraphQlGateway`). Он
 реализуется и коммитится первым.
 
 Затем **срезы**. Для каждого:
@@ -170,16 +178,19 @@ VO, потом все мапперы»), а по тонким сквозным �
 тестировщик и пройди по списку (нерелевантное пропускай — 5 честных строк лучше 30 для галочки):
 
 - **полнота данных**: поле отсутствует, `null`, пустой массив; нераспарсенный матч
-  (`version = null`); анонимный игрок (`account_id = null`, см. `known-issues.md`);
+  (OpenDota `version = null`, STRATZ `parsedDateTime = null`, `playbackData = null`); анонимный
+  игрок (`account_id` / `steamAccountId = null`, см. `known-issues.md`);
 - **типы**: строка вместо числа, отрицательное значение, выход за границы VO → какой
   `Invalid*Exception` и как он превращается в `SourceDataException`;
-- **стороны и раскладки**: Radiant vs Dire (safe ↔ offlane), матч без команд, нестандартные
-  раскладки линий и их влияние на `ProSceneRoleResolver`;
-- **ошибки источника**: 404, 429 (ретраи и `Retry-After`), 5xx, таймаут, битый JSON;
-- **пакетная загрузка**: в `getMatches()` один матч упал (HTTP, данные, роли) — ошибка в `getError()`, остальные отдаются; порядок
+- **стороны и раскладки**: Radiant vs Dire (OpenDota: safe ↔ offlane), матч без команд, нестандартные
+  раскладки линий и их влияние на `ProSceneRoleResolver` (только OpenDota);
+- **ошибки источника**: 404 / null-поле GraphQL, 403 (нет токена STRATZ), 429 (ретраи и `Retry-After`,
+  лимит STRATZ 150/мин), 5xx, таймаут, битый JSON, GraphQL `errors`;
+- **пакетная загрузка**: в `getMatches()` один матч упал (HTTP, данные, роли) — ошибка в `getError()`, остальные отдаются
+  (STRATZ: сбой запроса — у всех id пачки); порядок
   результатов; `concurrency`;
-- **сборка**: работает и через DI, и через `Dota2ApiClientBuilder`; старый формат конфига
-  потребителя; `source: stratz` до реализации.
+- **сборка**: работает и через DI, и через `Dota2ApiClientBuilder`; без токена STRATZ клиент
+  собирается, запросы — 403; старый формат конфига потребителя (не собирается).
 
 Ситуации, где поведение однозначно задано, пиши в матрицу. Где не описано или правила
 противоречат — это открытые вопросы на гейт, **не решай молча**.
@@ -219,8 +230,8 @@ VO, потом все мапперы»), а по тонким сквозным �
 
    | Задача | Агент |
    | --- | --- |
-   | Сущности, VO, enums, доменные исключения и сервисы (`<Context>/Domain`, `SharedKernel`), мапперы `Infrastructure/<Source>/<Context>/*Mapper`, `MatchExtractor` | `domain-implementer` |
-   | Порты `<Context>/Port/*SourceInterface`, `Match/Application`, адаптеры `*Source`, `SourceFactoryInterface` / `<Source>SourceFactory`, `ApiGateway`, `Exception/`, DI, конфиг, `Dota2ApiClient`, `Dota2ApiClientBuilder`, `Client/Config` | `api-designer` |
+   | Сущности, VO, enums, доменные исключения и сервисы (`<Source>/<Context>/Domain`, `SharedKernel`), мапперы `<Source>/Infrastructure/<Context>/*Mapper`, `MatchExtractor`, поля `MatchQuery::FIELDS` / `TeamQuery` | `domain-implementer` |
+   | Порты `<Source>/<Context>/Port/*SourceInterface`, `<Source>/Match/Application`, адаптеры `*Source`, `<Source>SourceFactory`, транспорт (`ApiGateway`, `GraphQlGateway`, `*HttpClientFactory`), клиенты `OpenDotaClient` / `StratzClient`, `Exception/`, DI, конфиг, `Dota2ApiClient`, `Dota2ApiClientBuilder`, `Client/Config` | `api-designer` |
    | Тесты PHPUnit и фикстуры | `test-writer` |
 
    Передавай агенту: путь к ТЗ, номер среза, контракты от `architect` (если были), точный
@@ -228,8 +239,10 @@ VO, потом все мапперы»), а по тонким сквозным �
 
 2. **Проверка среза** — делает оркестратор сам, это быстро:
    - `php -l` на изменённых файлах среза;
-   - если срез трогал поля источника — тесты `SourceFields/` входят в общий прогон, а новый
-     эндпоинт или вложенный ключ должен быть добавлен в `SourceFieldsChecker`;
+   - если срез трогал поля источника: OpenDota — тесты `SourceFields/` входят в общий прогон, а
+     новый эндпоинт или вложенный ключ должен быть добавлен в `SourceFieldsChecker`; STRATZ — новое
+     поле есть в запросе и в перезаписанной фикстуре, `php tools/refresh-stratz-fixtures.php`
+     (dry-run, токен из `.env.local`, не печатать) выходит с 0;
    - `php vendor/bin/phpunit tests/Unit/Architecture` — правила зависимостей слоёв (входит и в общий прогон);
    - `php vendor/bin/phpunit --order-by random` — весь набор идёт ~3 секунды, поэтому
      scoped-прогон не нужен; зелёный без warnings и deprecations (`phpunit.xml.dist` на них падает).
@@ -244,9 +257,12 @@ VO, потом все мапперы»), а по тонким сквозным �
    `refactor - ...`, `docs - ...`, `chore - ...`. Если работа по задаче — футер `Refs #N`.
 
 **Параллелизм.** Независимые срезы (разные файлы) запускай параллельно — несколько агентов в
-одном сообщении. Учитывай горячие файлы: `MatchPlayerPerformance`, `MatchExtractor`,
-`PlayerMapper`, `PlayerMapperTest` / `MatchMapperTest`, `ProSceneRoleResolverTest` трогает почти
-любой новый показатель матча — такие срезы либо вести последовательно, либо объединить в один.
+одном сообщении. Учитывай горячие файлы — их трогает почти любой новый показатель матча:
+OpenDota — `MatchPlayerPerformance`, `MatchExtractor`, `PlayerMapper`, `PlayerMapperTest` /
+`MatchMapperTest`, `ProSceneRoleResolverTest`; STRATZ — `MatchPlayer` / `ParsedStats`, `MatchQuery`,
+`PlayerMapper`, `PlayerMapperTest`, фикстуры `tests/Fixtures/stratz/match_*.json`; общие —
+`Dota2ApiClientBuilder`, `Resources/config/*.php`, `Dota2ApiExtensionTest`. Такие срезы либо вести
+последовательно, либо объединить в один.
 Проверку и коммит срезов сериализуй, чтобы коммиты не смешивались.
 
 **Переименования** классов/методов делай через PhpStorm MCP `rename_refactoring`, если он
@@ -266,7 +282,7 @@ VO, потом все мапперы»), а по тонким сквозным �
 `architecture.md` (слои, DI, конфиг), `known-issues.md` (закрытый или новый долг). Это не
 вертикальный срез: оформляй **отдельным коммитом** `docs - ...`, обычно последним, когда
 поведение зафиксировано. Если пример конфига (`config/packages/dota2_api.yaml`) или
-`examples/fetch_match.php` разошёлся с кодом — поправь в том же коммите.
+`examples/fetch_match.php` / `examples/fetch_stratz_match.php` разошёлся с кодом — поправь в том же коммите.
 
 ---
 
@@ -278,6 +294,8 @@ VO, потом все мапперы»), а по тонким сквозным �
 1. **Полный прогон**: `php vendor/bin/phpunit --order-by random` (2–3 раза, чтобы поймать
    зависимость от порядка) + `php -l` на всех изменённых файлах ветки +
    `php vendor/bin/phpunit tests/Unit/Architecture` (правила слоёв; входит и в полный прогон).
+   Если менялись запросы STRATZ — `php tools/refresh-stratz-fixtures.php` (dry-run, токен из
+   `.env.local`, не печатать) выходит с 0.
 2. **`ddd-reviewer`** по всей ветке (scoped относительно `main`).
 3. **Совместимость с потребителями** — если менялся публичный API, конфиг или DI: `grep` по
    затронутым классам/методам/ключам в `../../dota2-analytical-service/symfony` и `../test`.
