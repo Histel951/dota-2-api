@@ -17,7 +17,6 @@
 - **`getMatches()` фактически не параллелится на старте.** `ApiGateway::request()` сразу вызывает `getStatusCode()`, а он ждёт заголовков ответа. Поэтому каждый новый запрос ждёт заголовков предыдущего. Параллельной остаётся только загрузка тел ответов.
 - `MatchExtractor` читает обязательные поля игрока через `$data[$field]`: если ключа нет, будет warning и `null`.
 - `HttpStatusCode::TOO_MANY_REQUESTS` и `INTERNAL_SERVER_ERROR` больше не используются.
-- Фикстура `tests/Fixtures/team_responses.json` нигде не используется.
 - `composer audit` показывает 2 advisory в зависимостях (vendor) — нужно посмотреть.
 
 ## У потребителя (`dota2-analytical-service`)
@@ -25,6 +24,10 @@
 - `FetchMatchFromApiHandler` не читает `getError()`, а при `null` бросает общее «Match detail is null». Реальная причина (например, ошибка ролей) теряется в логах.
 - В `config/services.yaml` есть ссылки на `Domain\Services\RegionResolverInterface` и `Infrastructure\Services\RegionResolver`. В бандле таких классов нет.
 - Конфиг `dota2_api` в старом формате. Работает, но выдаёт deprecation — нужно перейти на `opendota.*`.
+
+## Исправлено по проверке полей источника (2026-10-30)
+
+`getPlayersByTeam()` падал на бывших игроках (`name` / `is_current_team_member` = `null`). `getTeams()` падал на командах с пустым `tag`. Удалена пустая фикстура `team_responses.json`.
 
 ## Исправлено рефакторингом
 

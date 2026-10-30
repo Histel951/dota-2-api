@@ -30,4 +30,7 @@
 - Про-ник игрока — `name`, при его отсутствии — `personaname`.
 - Регион — `region` → `Region::fromId()` (enum `RegionType`).
 - Детальная статистика (`item_uses`, `lane`, `objectives`, ...) есть только у матчей, распарсенных по реплею (`version` не null).
-- Образец полного ответа матча: `tests/Fixtures/opendota/match_8794744726.json`.
+- `players[].position_est` — оценка позиции 1–5 от самого OpenDota (появилась в ответе после сохранения фикстуры, в коде пока не используется). На матче 8794744726 совпадает с ролями `ProSceneRoleResolver`.
+- `/teams`: у ~12% команд `tag = ""` (иногда и `name = ""`). `/teams/{id}/players`: у бывших игроков `name` и `is_current_team_member` — `null`.
+- Большие числа (`dire_logo` и т.п. > `PHP_INT_MAX`) `json_decode` читает как float, поэтому дифф скрипта показывает `~ dire_logo: float -> string`. Код это поле не читает.
+- Реальные ответы: `tests/Fixtures/opendota/` — `match_8794744726.json` (полный распарсенный матч), `teams.json`, `team_8261500*.json` (Xtreme Gaming). Обновляются через `php tools/refresh-opendota-fixtures.php` (см. conventions.md → «Поля источника»).

@@ -68,8 +68,10 @@ VO, потом все мапперы»), а по тонким сквозным �
 то, что в этом бандле пропускают чаще всего:
 
 - **данные источника**: есть ли поле в реальном ответе и какого оно типа — смотри фикстуры
-  `tests/Fixtures/opendota/*.json` или живой ответ публичного API
-  (`curl -s https://api.opendota.com/api/<endpoint>`). Отдаётся ли оно только у
+  `tests/Fixtures/opendota/*.json` и `php tools/refresh-opendota-fixtures.php` (dry-run: дифф
+  живого OpenDota с фикстурами — новые, пропавшие, сменившие тип ключи). Эндпоинта нет в
+  скрипте — `curl -s https://api.opendota.com/api/<endpoint>`. Бывает ли «обязательное» поле
+  `null` в реальных данных (на этом уже падали `getTeams()` и `getPlayersByTeam()`). Отдаётся ли оно только у
   распарсенных матчей (`version` не null); абсолютное ли значение или относительно команды
   (как `lane` / `lane_role`);
 - **whitelist**: ключ матча доходит до маппера только через `MatchExtractor::PLAYER_FIELDS`;
@@ -226,6 +228,8 @@ VO, потом все мапперы»), а по тонким сквозным �
 
 2. **Проверка среза** — делает оркестратор сам, это быстро:
    - `php -l` на изменённых файлах среза;
+   - если срез трогал поля источника — тесты `SourceFields/` входят в общий прогон, а новый
+     эндпоинт или вложенный ключ должен быть добавлен в `SourceFieldsChecker`;
    - `grep -rn "Infrastructure" src/Domain` — пусто;
    - `php vendor/bin/phpunit --order-by random` — весь набор идёт ~3 секунды, поэтому
      scoped-прогон не нужен; зелёный без warnings и deprecations (`phpunit.xml.dist` на них падает).
