@@ -38,15 +38,26 @@ class TeamOpenDotaMapperTest extends TestCase
 
     /**
      * Реальный список /teams содержит команду с name = "" и tag = "" (team_id 5026801):
-     * пустой tag маппится в null, а не роняет весь список
+     * пустые name и tag маппятся в null, а не роняют весь список
      */
-    public function test_toCollectionMapsRealTeamWithEmptyTagAsNull()
+    public function test_toCollectionMapsRealTeamWithEmptyNameAndTagAsNull()
     {
         $teams = (new TeamOpenDotaMapper())->toCollection(self::load('teams.json'));
 
         $team = $teams[13];
         $this->assertSame(5026801, $team->getId()->toInt());
         $this->assertNull($team->getTag());
+        $this->assertNull($team->getName());
+    }
+
+    public function test_toEntityMapsWhitespaceOrMissingNameAsNull()
+    {
+        $data = self::load('team_8261500.json');
+        $data['name'] = '  ';
+        $this->assertNull((new TeamOpenDotaMapper())->toEntity($data)->getName());
+
+        unset($data['name']);
+        $this->assertNull((new TeamOpenDotaMapper())->toEntity($data)->getName());
     }
 
     public function test_toEntityMapsWhitespaceTagAsNull()

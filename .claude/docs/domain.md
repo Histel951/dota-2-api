@@ -24,7 +24,7 @@ MatchPlayerPerformance (immutable, роль меняется только чер
 
 ## Команды
 
-- `Team` — TeamId, ?TeamName, ?TeamTag (пустой tag у источника → `null`), TeamStats (wins/losses/rating), lastMatchTime
+- `Team` — TeamId, ?TeamName, ?TeamTag (пустые name/tag у источника → `null`), TeamStats (wins/losses/rating), lastMatchTime
 - `TeamMatch` — MatchId, MatchOutcome, startTime, Cluster, LeagueId, LeagueName, opposingTeamId, ?opposingTeamName
 - `TeamPlayer` — PlayerId, ?PlayerName (у бывших игроков имени нет), WinrateStats, isCurrentTeamMember (`null` у источника → `false`)
 - `TeamHero` — HeroId, HeroName, WinrateStats
