@@ -6,15 +6,16 @@ namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
-use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
+use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\OpenDotaTeamSource;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamPlayerMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
 
 final class OpenDotaProviderFactory implements ProviderFactory
@@ -38,14 +39,14 @@ final class OpenDotaProviderFactory implements ProviderFactory
         );
     }
 
-    public function createTeamProvider(): TeamProviderInterface
+    public function createTeamProvider(): TeamSourceInterface
     {
-        return new OpenDotaTeamProvider(
+        return new OpenDotaTeamSource(
             gateway: $this->gateway,
-            teamMapper: new TeamOpenDotaMapper(),
-            matchesMapper: new TeamMatchOpenDotaMapper(),
-            playerMapper: new TeamPlayerOpenDotaMapper(),
-            heroMapper: new TeamHeroOpenDotaMapper(),
+            teamMapper: new TeamMapper(),
+            matchesMapper: new TeamMatchMapper(),
+            playerMapper: new TeamPlayerMapper(),
+            heroMapper: new TeamHeroMapper(),
         );
     }
 }

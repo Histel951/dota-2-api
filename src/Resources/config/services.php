@@ -5,7 +5,7 @@ use Histel951\Dota2Api\Client\Dota2ApiClient;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
-use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
+use Histel951\Dota2Api\Team\Port\TeamSourceInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Client\Config\ClientConfig;
@@ -59,7 +59,7 @@ return static function (ContainerConfigurator $configurator): void {
     $services->set(MatchesProviderInterface::class)
         ->factory([service(ProviderFactory::class), 'createMatchProvider']);
 
-    $services->set(TeamProviderInterface::class)
+    $services->set(TeamSourceInterface::class)
         ->factory([service(ProviderFactory::class), 'createTeamProvider']);
 
     $services->set(Dota2ApiClient::class)

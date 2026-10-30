@@ -9,7 +9,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\Services\PrefilledRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaTeamProvider;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\OpenDotaTeamSource;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
@@ -27,7 +27,7 @@ class Dota2ApiExtensionTest extends TestCase
         $client = $container->get(Dota2ApiClient::class);
 
         $this->assertInstanceOf(OpenDotaMatchProvider::class, $client->matches());
-        $this->assertInstanceOf(OpenDotaTeamProvider::class, $client->teams());
+        $this->assertInstanceOf(OpenDotaTeamSource::class, $client->teams());
         $this->assertSame('secret', $container->getParameter('dota2_api.api_key'));
         $this->assertSame('https://api.opendota.com/api/', $container->getParameter('dota2_api.base_url'));
         $this->assertSame(60, $container->getParameter('dota2_api.timeout'));
