@@ -14,7 +14,7 @@ declare(strict_types = 1);
  * Если задан OPENDOTA_API_KEY, он передаётся в query "api_key".
  */
 
-use Histel951\Dota2Api\Tests\Support\OpenDota\KeyDiff;
+use Histel951\Dota2Api\Tests\Support\KeyDiff;
 use Histel951\Dota2Api\Tests\Support\OpenDota\SourceFieldsChecker;
 use Symfony\Component\HttpClient\HttpClient;
 use Symfony\Component\HttpClient\RetryableHttpClient;

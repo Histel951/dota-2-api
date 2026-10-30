@@ -58,10 +58,6 @@ final readonly class GraphQlGateway
     }
 
     /**
-     * @throws SourceRequestException статус не 200, транспорт, ответ без data с errors
-     * @throws SourceDataException не JSON, нет ни data, ни errors, data не объект
-     */
-    /**
      * Тексты GraphQL-ошибок из тела не-200 ответа (STRATZ отдаёт ошибки запроса со статусом 400)
      */
     private function errorDetails(ResponseInterface $response): string
@@ -80,6 +76,10 @@ final readonly class GraphQlGateway
         return [] === $messages ? '' : ': ' . implode('; ', $messages);
     }
 
+    /**
+     * @throws SourceRequestException статус не 200, транспорт, ответ без data с errors
+     * @throws SourceDataException не JSON, нет ни data, ни errors, data не объект
+     */
     public function decode(ResponseInterface $response): GraphQlResult
     {
         try {

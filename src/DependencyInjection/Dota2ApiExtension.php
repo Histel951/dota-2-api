@@ -28,5 +28,6 @@ final class Dota2ApiExtension extends Extension
 
         $loader->load('services.php');
         $loader->load('opendota.php');
+        $loader->load('stratz.php');
     }
 }

@@ -316,6 +316,33 @@ final class LayerDependenciesTest extends TestCase
         self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\OpenDota\\OpenDotaClient', 'OpenDotaClient.php'));
     }
 
+    public function test_detectsStratzClientDependingOnInfrastructure(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Stratz;
+            use Histel951\Dota2Api\Stratz\Infrastructure\GraphQlGateway;
+            final class StratzClient { public function __construct(private GraphQlGateway $gateway) {} }
+            PHP;
+
+        $violations = $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\StratzClient', 'StratzClient.php');
+
+        self::assertContains('StratzClient.php:3 Stratz\\StratzClient → Histel951\\Dota2Api\\Stratz\\Infrastructure\\GraphQlGateway', $violations);
+    }
+
+    public function test_allowsStratzClientOnOwnApplicationAndPort(): void
+    {
+        $code = <<<'PHP'
+            <?php
+            namespace Histel951\Dota2Api\Stratz;
+            use Histel951\Dota2Api\Stratz\Match\Application\MatchService;
+            use Histel951\Dota2Api\Stratz\Team\Port\TeamSourceInterface;
+            final class StratzClient { public function __construct(MatchService $m, TeamSourceInterface $t) {} }
+            PHP;
+
+        self::assertSame([], $this->analyze($code, 'Histel951\\Dota2Api\\Stratz\\StratzClient', 'StratzClient.php'));
+    }
+
     /**
      * @return list<string> нарушения в формате "file:line Layer → TargetFQCN"
      */
