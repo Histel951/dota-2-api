@@ -20,11 +20,13 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
     private const array REQUIRED_FIELDS = [
         'account_id',
         'games_played',
-        'wins',
-        'is_current_team_member'
+        'wins'
     ];
 
-    private const array OPTIONAL_FIELDS = ['name'];
+    /**
+     * name и is_current_team_member у бывших игроков команды приходят null
+     */
+    private const array OPTIONAL_FIELDS = ['name', 'is_current_team_member'];
 
     /**
      * @throws MappingException
@@ -48,9 +50,9 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
         try {
             return new TeamPlayer(
                 playerId: new PlayerId($data['account_id']),
-                playerProName: new PlayerName($optional['name']),
+                playerProName: $optional['name'] === null ? null : new PlayerName($optional['name']),
                 playerStats: $stats,
-                isCurrentTeamMember: $data['is_current_team_member']
+                isCurrentTeamMember: $optional['is_current_team_member'] ?? false
             );
         } catch (Throwable $e) {
             throw new MappingException($e->getMessage(), $e->getCode(), $e);
