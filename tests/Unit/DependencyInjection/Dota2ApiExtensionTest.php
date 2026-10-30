@@ -207,6 +207,40 @@ class Dota2ApiExtensionTest extends TestCase
         $this->assertNull($config->getApiKey());
     }
 
+    public function test_stratzRateLimitIsNullByDefault()
+    {
+        $container = $this->createContainer([[]]);
+        $container->getDefinition('dota2_api.stratz.config')->setPublic(true);
+        $container->compile();
+
+        /** @var ClientConfig $config */
+        $config = $container->get('dota2_api.stratz.config');
+
+        $this->assertNull($container->getParameter('dota2_api.stratz.rate_limit'));
+        $this->assertNull($config->getRateLimitPerMinute());
+    }
+
+    public function test_stratzRateLimitReachesClientConfig()
+    {
+        $container = $this->createContainer([['stratz' => ['rate_limit' => 150]]]);
+        $container->getDefinition('dota2_api.stratz.config')->setPublic(true);
+        $container->compile();
+
+        /** @var ClientConfig $config */
+        $config = $container->get('dota2_api.stratz.config');
+
+        $this->assertSame(150, $container->getParameter('dota2_api.stratz.rate_limit'));
+        $this->assertSame(150, $config->getRateLimitPerMinute());
+    }
+
+    public function test_stratzZeroRateLimitIsRejected()
+    {
+        $this->expectException(InvalidConfigurationException::class);
+        $this->expectExceptionMessage('rate_limit');
+
+        $this->createContainer([['stratz' => ['rate_limit' => 0]]]);
+    }
+
     public function test_stratzSourcesAreCreatedFromSourceFactory()
     {
         $container = $this->createContainer([[]]);
