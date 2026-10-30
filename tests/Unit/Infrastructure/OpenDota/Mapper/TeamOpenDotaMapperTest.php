@@ -19,8 +19,7 @@ class TeamOpenDotaMapperTest extends TestCase
 
     public function test_toCollectionMapsAllTeamsFromFixture()
     {
-        // Элемент с пустым tag (team_id 5026801) отфильтрован: см. test_toCollectionFailsOnRealTeamWithEmptyTag
-        $raw = array_values(array_filter(self::load('teams.json'), static fn(array $t): bool => $t['tag'] !== ''));
+        $raw = self::load('teams.json');
 
         $teams = (new TeamOpenDotaMapper())->toCollection($raw);
 
@@ -30,7 +29,7 @@ class TeamOpenDotaMapperTest extends TestCase
         $first = $teams[0];
         $this->assertSame(9823272, $first->getId()->toInt());
         $this->assertSame('Team Yandex', $first->getName()?->getValue());
-        $this->assertSame('TY', $first->getTag()->getValue());
+        $this->assertSame('TY', $first->getTag()?->getValue());
         $this->assertSame(231, $first->getStats()->getWins());
         $this->assertSame(142, $first->getStats()->getLosses());
         $this->assertSame(1589.46, $first->getStats()->getRating());
@@ -38,16 +37,24 @@ class TeamOpenDotaMapperTest extends TestCase
     }
 
     /**
-     * Поведение зафиксировано КАК ЕСТЬ (дефект): реальный список /teams содержит команду
-     * с name = "" и tag = "" (team_id 5026801), а TeamTag бросает на пустой строке, поэтому
-     * toCollection() падает на всём списке. При исправлении тест нужно пересмотреть.
+     * Реальный список /teams содержит команду с name = "" и tag = "" (team_id 5026801):
+     * пустой tag маппится в null, а не роняет весь список
      */
-    public function test_toCollectionFailsOnRealTeamWithEmptyTag()
+    public function test_toCollectionMapsRealTeamWithEmptyTagAsNull()
     {
-        $this->expectException(MappingException::class);
-        $this->expectExceptionMessage('Team tag cannot be empty');
+        $teams = (new TeamOpenDotaMapper())->toCollection(self::load('teams.json'));
 
-        (new TeamOpenDotaMapper())->toCollection(self::load('teams.json'));
+        $team = $teams[13];
+        $this->assertSame(5026801, $team->getId()->toInt());
+        $this->assertNull($team->getTag());
+    }
+
+    public function test_toEntityMapsWhitespaceTagAsNull()
+    {
+        $data = self::load('team_8261500.json');
+        $data['tag'] = '   ';
+
+        $this->assertNull((new TeamOpenDotaMapper())->toEntity($data)->getTag());
     }
 
     public function test_toEntityMapsSingleTeamFixture()
@@ -56,7 +63,7 @@ class TeamOpenDotaMapperTest extends TestCase
 
         $this->assertSame(8261500, $team->getId()->toInt());
         $this->assertSame('Xtreme Gaming', $team->getName()?->getValue());
-        $this->assertSame('XG', $team->getTag()->getValue());
+        $this->assertSame('XG', $team->getTag()?->getValue());
         $this->assertSame(627, $team->getStats()->getWins());
         $this->assertSame(516, $team->getStats()->getLosses());
     }
