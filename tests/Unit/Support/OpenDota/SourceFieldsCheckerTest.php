@@ -135,7 +135,7 @@ class SourceFieldsCheckerTest extends TestCase
         ]);
 
         $this->assertContains(
-            'matches/1 objectives [0]: missing "player_slot" (MatchOpenDotaMapper, hardcoded)',
+            'matches/1 objectives [0]: missing "player_slot" (MatchMapper, hardcoded)',
             $violations,
         );
     }

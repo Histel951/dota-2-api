@@ -3,8 +3,8 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Support\OpenDota;
 
-use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchExtractor;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Match\MatchMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
@@ -21,7 +21,7 @@ use ReflectionClass;
 final class SourceFieldsChecker
 {
     /**
-     * Вложенные ключи игрока матча. Захардкожены в MatchOpenDotaMapper (не вынесены в константы),
+     * Вложенные ключи игрока матча. Захардкожены в MatchMapper (не вынесены в константы),
      * поэтому перечислены здесь явно. Путь через точку, достаточно одного игрока с ключом.
      */
     private const array MATCH_PLAYER_NESTED_ANY = [
@@ -29,10 +29,10 @@ final class SourceFieldsChecker
         'ability_uses.ability_lamp_use',
     ];
 
-    /** Ключи каждого элемента picks_bans[]; захардкожены в MatchOpenDotaMapper. */
+    /** Ключи каждого элемента picks_bans[]; захардкожены в MatchMapper. */
     private const array MATCH_PICKS_BANS_EACH = ['hero_id', 'order', 'team', 'is_pick'];
 
-    /** Тип события objectives[], которое читает MatchOpenDotaMapper. */
+    /** Тип события objectives[], которое читает MatchMapper. */
     private const string MINIBOSS_OBJECTIVE_TYPE = 'CHAT_MESSAGE_MINIBOSS_KILL';
 
     /**
@@ -207,15 +207,15 @@ final class SourceFieldsChecker
             ),
             ...self::checkRequired(
                 $root,
-                self::readFields(MatchOpenDotaMapper::class, 'REQUIRED_FIELDS'),
+                self::readFields(MatchMapper::class, 'REQUIRED_FIELDS'),
                 $context,
-                'MatchOpenDotaMapper::REQUIRED_FIELDS',
+                'MatchMapper::REQUIRED_FIELDS',
             ),
             ...self::checkOptional(
                 $root,
-                self::readFields(MatchOpenDotaMapper::class, 'OPTIONAL_FIELDS'),
+                self::readFields(MatchMapper::class, 'OPTIONAL_FIELDS'),
                 $context,
-                'MatchOpenDotaMapper::OPTIONAL_FIELDS',
+                'MatchMapper::OPTIONAL_FIELDS',
             ),
         ];
 
@@ -235,7 +235,7 @@ final class SourceFieldsChecker
                     $players,
                     self::MATCH_PLAYER_NESTED_ANY,
                     $context . ' players',
-                    'MatchOpenDotaMapper, hardcoded',
+                    'MatchMapper, hardcoded',
                 ),
             ];
         }
@@ -347,7 +347,7 @@ final class SourceFieldsChecker
     private static function checkObjectives(array $match, string $context): array
     {
         $objectives = $match['objectives'] ?? null;
-        $source = 'MatchOpenDotaMapper, hardcoded';
+        $source = 'MatchMapper, hardcoded';
 
         if (!is_array($objectives) || $objectives === []) {
             return [sprintf('%s: "objectives" is missing or empty (%s)', $context, $source)];
@@ -381,14 +381,14 @@ final class SourceFieldsChecker
         $picksBans = $match['picks_bans'] ?? null;
 
         if (!is_array($picksBans) || $picksBans === []) {
-            return [sprintf('%s: "picks_bans" is missing or empty (MatchOpenDotaMapper, hardcoded)', $context)];
+            return [sprintf('%s: "picks_bans" is missing or empty (MatchMapper, hardcoded)', $context)];
         }
 
         return self::checkEach(
             $picksBans,
             self::MATCH_PICKS_BANS_EACH,
             $context . ' picks_bans',
-            'MatchOpenDotaMapper, hardcoded',
+            'MatchMapper, hardcoded',
         );
     }
 

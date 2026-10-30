@@ -3,13 +3,14 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Infrastructure\Http;
 
-use Exception;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Exception\SourceRequestException;
+use Symfony\Contracts\HttpClient\Exception\DecodingExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
-use Throwable;
 
 class ApiGateway implements ApiGatewayInterface
 {
@@ -21,63 +22,32 @@ class ApiGateway implements ApiGatewayInterface
 
     /**
      * @param ResponseInterface[] $responses
-     * @return ResponseStreamInterface
      */
     public function stream(array $responses): ResponseStreamInterface
     {
         return $this->httpClient->stream($responses);
     }
 
-    /**
-     * @throws SourceRequestException
-     */
     public function get(string $endpoint): array
     {
-        $response = $this->request(HttpMethod::GET, $endpoint);
-        return $this->parseResponse($response);
+        return $this->decode($this->request(HttpMethod::GET, $endpoint));
     }
 
-    /**
-     * @param HttpMethod $method
-     * @param string $endpoint
-     * @return ResponseInterface
-     * @throws SourceRequestException
-     * @throws Exception
-     */
     public function request(HttpMethod $method, string $endpoint): ResponseInterface
     {
         try {
-            $response = $this->httpClient->request($method->value, $endpoint);
+            return $this->httpClient->request($method->value, $endpoint);
         } catch (TransportExceptionInterface $e) {
-            throw new SourceRequestException($e->getMessage());
-        }
-
-        $this->checkResponseStatus($response);
-
-        return $response;
-    }
-
-    /**
-     * @throws SourceRequestException
-     */
-    private function parseResponse(ResponseInterface $response): array
-    {
-        try {
-            return $response->toArray();
-        } catch (Throwable $e) {
-            throw new SourceRequestException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceRequestException($e->getMessage(), 0, $e);
         }
     }
 
-    /**
-     * @throws SourceRequestException
-     */
-    private function checkResponseStatus(ResponseInterface $response): void
+    public function decode(ResponseInterface $response): array
     {
         try {
             $statusCode = $response->getStatusCode();
         } catch (TransportExceptionInterface $e) {
-            throw new SourceRequestException($e->getMessage());
+            throw new SourceRequestException($e->getMessage(), 0, $e);
         }
 
         if ($statusCode === HttpStatusCode::NOT_FOUND->value) {
@@ -88,6 +58,14 @@ class ApiGateway implements ApiGatewayInterface
             throw new SourceRequestException(
                 sprintf('API returned unexpected status code %d', $statusCode)
             );
+        }
+
+        try {
+            return $response->toArray();
+        } catch (DecodingExceptionInterface $e) {
+            throw new SourceDataException($e->getMessage(), 0, $e);
+        } catch (ExceptionInterface $e) {
+            throw new SourceRequestException($e->getMessage(), 0, $e);
         }
     }
 }
