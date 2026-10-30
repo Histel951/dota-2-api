@@ -50,7 +50,7 @@ GRAPHQL;
      *
      * @return array{query: string, variables: array<string, int>}
      */
-    public static function build(array $ids, bool $withPlaybackData = true): array
+    public static function build(array $ids, bool $withPlaybackData = false): array
     {
         $declarations = [];
         $selections = [];

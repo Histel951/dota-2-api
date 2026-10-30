@@ -36,8 +36,8 @@ GraphQL, `POST https://api.stratz.com/graphql`, обязателен токен 
 
 | Метод клиента | GraphQL | Результат | Маппер |
 |---|---|---|---|
-| `matches()->getMatch(MatchId, withPlaybackData = true)` | `MatchQuery::build([id], withPlaybackData)`: `m0: match(id) { ...MatchFields }` | `MatchFetchResult` (→ `MatchDetail`); HTTP/GraphQL-ошибка бросается | `MatchMapper` (`PlayerMapper`, `LaneMapper`, `DraftMapper`) |
-| `matches()->getMatches(list<MatchId>, concurrency = 5, withPlaybackData = true)` | тот же запрос; матчей на запрос — `MatchQuery::batchSize()`: с `playbackData` `BATCH_SIZE_WITH_PLAYBACK` (= 1), без — `BATCH_SIZE` (= 5); до `concurrency` запросов параллельно | `Generator<MatchFetchResult>`; любая ошибка матча — в `getError()` | то же |
+| `matches()->getMatch(MatchId, withPlaybackData = false)` | `MatchQuery::build([id], withPlaybackData)`: `m0: match(id) { ...MatchFields }` | `MatchFetchResult` (→ `MatchDetail`); HTTP/GraphQL-ошибка бросается | `MatchMapper` (`PlayerMapper`, `LaneMapper`, `DraftMapper`) |
+| `matches()->getMatches(list<MatchId>, concurrency = 5, withPlaybackData = false)` | тот же запрос; матчей на запрос — `MatchQuery::batchSize()`: с `playbackData` `BATCH_SIZE_WITH_PLAYBACK` (= 1), без — `BATCH_SIZE` (= 5); до `concurrency` запросов параллельно | `Generator<MatchFetchResult>`; любая ошибка матча — в `getError()` | то же |
 | `teams()->getTeam(TeamId)` | `TeamQuery::TEAM`: `team(teamId) { id name tag winCount lossCount lastMatchDateTime }` | `Team` | `TeamMapper` |
 | `teams()->getMatchesByTeam(TeamId)` | `TeamQuery::MATCHES`: `team.matches(take: 100, skip: 0)` | `list<TeamMatch>` (последние 100) | `TeamMatchMapper` |
 | `teams()->getPlayersByTeam(TeamId)` | `TeamQuery::PLAYERS`: `team.matchesGroupBy(groupBy: STEAM_ACCOUNT_ID, take: 20000)` | `list<TeamPlayer>` (вся история) | `TeamPlayerMapper` |
@@ -45,13 +45,13 @@ GraphQL, `POST https://api.stratz.com/graphql`, обязателен токен 
 
 Запросы — константы в `Stratz/Infrastructure/{Match/MatchQuery, Team/TeamQuery}`; `MatchQuery::FIELDS` (фрагмент `MatchFields on MatchType`) — единственное место, где перечислены поля матча. Аналога `getTeams()` нет: у STRATZ нет списка всех команд.
 
-**Режим без `playbackData`.** `playbackData` нужен только для байбеков. Если они не нужны, пачку быстрее грузить без него:
+**Режим `playbackData` (байбеки).** По умолчанию `playbackData` не запрашивается: фрагмент `MatchFields` строится без `MatchQuery::PLAYBACK_FIELDS`, матчи идут по 5 в запросе (алиасы `m0`…`m4`), `ParsedStats::getBuybacks()` = `null`, остальные поля заполнены как обычно. Байбеки нужны — включить явно:
 
 ```php
-$results = $client->stratz()->matches()->getMatches($ids, $concurrency, withPlaybackData: false);
+$results = $client->stratz()->matches()->getMatches($ids, $concurrency, withPlaybackData: true);
 ```
 
-Фрагмент `MatchFields` строится без `MatchQuery::PLAYBACK_FIELDS`, матчи идут по 5 в запросе (алиасы `m0`…`m4`), `ParsedStats::getBuybacks()` = `null`, остальные поля заполнены как обычно. Живой прогон 2026-10-30: 9 матчей — ≈1.5 с без `playbackData` против ≈11 с с ним. Так же работает `getMatch($id, withPlaybackData: false)`.
+Тогда матчи идут по одному на запрос (STRATZ пересобирает `playbackData` не более чем для одного незакэшированного матча за запрос) — заметно медленнее: живой прогон 2026-10-30, 9 матчей — ≈1.5 с без `playbackData` против ≈11 с с ним. Так же работает `getMatch($id, withPlaybackData: true)`.
 
 **Лимитер.** `dota2_api.stratz.rate_limit` (запросов в минуту, по умолчанию `null` — выключен; в Builder — `ClientConfig(rateLimitPerMinute: N)`). Запросы сверх лимита ждут окна, а не падают; ретраи тоже расходуют лимит. Состояние — в памяти процесса (known-issues.md).
 

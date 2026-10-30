@@ -265,7 +265,7 @@ class StratzMatchSourceTest extends TestCase
         }
     }
 
-    public function test_getMatchesWithPlaybackDataByDefaultRequestsOneMatchPerQuery()
+    public function test_getMatchesWithPlaybackDataRequestsOneMatchPerQuery()
     {
         $source = $this->createSource(fn(int $id): MockResponse => $this->matchResponse($id));
 
@@ -275,6 +275,19 @@ class StratzMatchSourceTest extends TestCase
         foreach ($this->requests as $request) {
             $this->assertCount(1, $request['ids']);
             $this->assertStringContainsString(MatchQuery::PLAYBACK_FIELDS, $request['query']);
+        }
+    }
+
+    public function test_getMatchesWithoutFlagDefaultsToNoPlaybackDataInBatchesOfFive()
+    {
+        $source = $this->createBatchSource(fn(array $ids): MockResponse => $this->batchResponse($ids));
+        $ids = array_map(static fn(int $id): MatchId => new MatchId($id), range(301, 307));
+
+        iterator_to_array($source->getMatches($ids, 2), false);
+
+        $this->assertSame([5, 2], array_map(static fn(array $r): int => count($r['ids']), $this->requests));
+        foreach ($this->requests as $request) {
+            $this->assertStringNotContainsString('playbackData', $request['query']);
         }
     }
 

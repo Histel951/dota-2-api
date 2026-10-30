@@ -29,7 +29,7 @@ final class StratzMatchSource implements MatchSourceInterface
      * @throws SourceRequestException
      * @throws SourceDataException
      */
-    public function getMatch(MatchId $id, bool $withPlaybackData = true): MatchDetail
+    public function getMatch(MatchId $id, bool $withPlaybackData = false): MatchDetail
     {
         ['query' => $query, 'variables' => $variables] = MatchQuery::build([$id], $withPlaybackData);
 
@@ -41,7 +41,7 @@ final class StratzMatchSource implements MatchSourceInterface
      * @param positive-int $concurrency
      * @return Generator<MatchId, MatchDetail|SourceRequestException|SourceDataException, mixed, void>
      */
-    public function getMatches(array $ids, int $concurrency, bool $withPlaybackData = true): Generator
+    public function getMatches(array $ids, int $concurrency, bool $withPlaybackData = false): Generator
     {
         $responses = ConcurrentRequests::fetch(
             array_chunk($ids, MatchQuery::batchSize($withPlaybackData)),

@@ -11,7 +11,7 @@ class MatchQueryTest extends TestCase
 {
     public function test_buildSingleMatch()
     {
-        $built = MatchQuery::build([new MatchId(9026055036)]);
+        $built = MatchQuery::build([new MatchId(9026055036)], true);
 
         $this->assertSame(['m0' => 9026055036], $built['variables']);
         $this->assertStringContainsString('query Matches($m0: Long!)', $built['query']);
@@ -21,7 +21,7 @@ class MatchQueryTest extends TestCase
 
     public function test_buildContainsRequestedFields()
     {
-        $query = MatchQuery::build([new MatchId(1)])['query'];
+        $query = MatchQuery::build([new MatchId(1)], true)['query'];
 
         foreach (['fragment MatchFields on MatchType', 'pickBans', 'playbackData', 'buyBackEvents', 'stunDuration'] as $needle) {
             $this->assertStringContainsString($needle, $query);
@@ -53,9 +53,10 @@ class MatchQueryTest extends TestCase
         $this->assertSame('m12', MatchQuery::alias(12));
     }
 
-    public function test_buildWithPlaybackDataByDefault()
+    public function test_buildWithoutPlaybackDataByDefault()
     {
-        $this->assertSame(MatchQuery::build([new MatchId(1)]), MatchQuery::build([new MatchId(1)], true));
+        $this->assertSame(MatchQuery::build([new MatchId(1)]), MatchQuery::build([new MatchId(1)], false));
+        $this->assertStringNotContainsString('playbackData', MatchQuery::build([new MatchId(1)])['query']);
     }
 
     public function test_buildWithoutPlaybackDataOmitsPlaybackFields()

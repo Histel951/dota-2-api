@@ -120,7 +120,7 @@ Dota2ApiClient::stratz()->teams() = Stratz\Team\Port\TeamSourceInterface = Strat
 
 Частичный ответ GraphQL (есть и `data`, и `errors`) — не ошибка `decode()`: ошибка всплывает только у поля, которое пришло `null`. Ошибки запроса (неизвестное поле и т.п.) STRATZ отдаёт со статусом 400 — их тексты `decode()` дописывает в сообщение.
 
-`Stratz\Match\Application\MatchService(MatchSourceInterface $source)` повторяет семантику OpenDota-сервиса: `getMatch(MatchId $id, bool $withPlaybackData = true)` бросает `SourceRequestException`, `SourceDataException` возвращает в `MatchFetchResult`; `$withPlaybackData` прокидывается в порт.
+`Stratz\Match\Application\MatchService(MatchSourceInterface $source)` повторяет семантику OpenDota-сервиса: `getMatch(MatchId $id, bool $withPlaybackData = false)` бросает `SourceRequestException`, `SourceDataException` возвращает в `MatchFetchResult`; `$withPlaybackData` прокидывается в порт.
 
 **Лимитер STRATZ.** `dota2_api.stratz.rate_limit` → `ClientConfig::rateLimitPerMinute` → `StratzHttpClientFactory::create()` оборачивает клиент в `ThrottlingHttpClient` (`symfony/rate-limiter`, `sliding_window`, интервал 1 минута, id `dota2_api.stratz`) **внутри** `RetryableHttpClient`: ретрай идёт через обёрнутый клиент (`AsyncContext::replaceRequest`), поэтому каждый повтор тоже расходует лимит. Запрос сверх лимита ждёт окна, а не падает. Состояние — `InMemoryStorage` в памяти клиента, то есть лимит действует в пределах одного процесса (known-issues.md). `null` — лимитера нет. OpenDota параметр игнорирует. `ThrottlingHttpClient` появился в Symfony 7.1 — отсюда минимум бандла `^7.1`.
 
@@ -128,7 +128,7 @@ Dota2ApiClient::stratz()->teams() = Stratz\Team\Port\TeamSourceInterface = Strat
 
 ## Пакетная загрузка
 
-`MatchService::getMatches(list<MatchId> $ids, int $concurrency = 5)` у обоих источников — генератор `MatchFetchResult` (у STRATZ ещё `bool $withPlaybackData = true`). Default `concurrency` задан только в сервисах.
+`MatchService::getMatches(list<MatchId> $ids, int $concurrency = 5)` у обоих источников — генератор `MatchFetchResult` (у STRATZ ещё `bool $withPlaybackData = false`). Default `concurrency` задан только в сервисах.
 
 **Окно — `Infrastructure\Http\ConcurrentRequests::fetch(list $batches, int $concurrency, Closure $send, Closure $stream)`.** Общий помощник без знания источника, формата и домена. Партия (`TBatch`) — один HTTP-запрос: у OpenDota это `MatchId`, у STRATZ — `list<MatchId>`. Помощник держит до `$concurrency` ленивых запросов `$send($batch)` в полёте (`SplQueue` партий + `SplObjectStorage<ResponseInterface, TBatch>`), читает их через `$stream` (`ApiGateway::stream()` / `GraphQlGateway::stream()`) и после каждого завершения стартует следующий. Отдаёт генератор `TBatch => ResponseInterface|SourceRequestException` по готовности, порядок не гарантирован, дубли не теряются:
 
@@ -142,8 +142,8 @@ Dota2ApiClient::stratz()->teams() = Stratz\Team\Port\TeamSourceInterface = Strat
 
 **STRATZ.** `StratzMatchSource::getMatches()` режет id на пачки по `MatchQuery::batchSize($withPlaybackData)` (алиасы `m0`, `m1`, … в одном GraphQL-запросе) и отдаёт пачки в `ConcurrentRequests`:
 
-- с `playbackData` (по умолчанию) — `BATCH_SIZE_WITH_PLAYBACK = 1`: STRATZ пересобирает `playbackData` из реплея не более чем для одного незакэшированного матча за запрос, поэтому один матч — один запрос, параллельность даёт только окно;
-- без `playbackData` — `BATCH_SIZE = 5`, фрагмент без `PLAYBACK_FIELDS`, `ParsedStats::getBuybacks()` = `null`.
+- с `playbackData` (`withPlaybackData: true`) — `BATCH_SIZE_WITH_PLAYBACK = 1`: STRATZ пересобирает `playbackData` из реплея не более чем для одного незакэшированного матча за запрос, поэтому один матч — один запрос, параллельность даёт только окно;
+- без `playbackData` (по умолчанию) — `BATCH_SIZE = 5`, фрагмент без `PLAYBACK_FIELDS`, `ParsedStats::getBuybacks()` = `null`.
 
 Ошибки по пачке:
 

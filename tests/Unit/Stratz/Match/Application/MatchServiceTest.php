@@ -30,7 +30,7 @@ class MatchServiceTest extends TestCase
     {
         $id = new MatchId(9026055036);
         $match = $this->createMatch();
-        $this->source->expects($this->once())->method('getMatch')->with($id, true)->willReturn($match);
+        $this->source->expects($this->once())->method('getMatch')->with($id, false)->willReturn($match);
 
         $result = $this->service->getMatch($id);
 
@@ -99,7 +99,7 @@ class MatchServiceTest extends TestCase
         $this->source
             ->expects($this->once())
             ->method('getMatches')
-            ->with($ids, 5, true)
+            ->with($ids, 5, false)
             ->willReturnCallback(static function (): Generator {
                 yield from [];
             });
@@ -113,7 +113,7 @@ class MatchServiceTest extends TestCase
         $this->source
             ->expects($this->once())
             ->method('getMatches')
-            ->with($ids, 2, true)
+            ->with($ids, 2, false)
             ->willReturnCallback(static function (): Generator {
                 yield from [];
             });

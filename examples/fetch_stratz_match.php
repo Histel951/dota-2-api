@@ -32,7 +32,7 @@ $client = (new Dota2ApiClientBuilder(
     ),
 ))->build();
 
-$result = $client->stratz()->matches()->getMatch(new MatchId((int) ($argv[1] ?? 9026055036)));
+$result = $client->stratz()->matches()->getMatch(new MatchId((int) ($argv[1] ?? 9026055036)), withPlaybackData: true);
 $match = $result->getMatchDetail();
 
 if (null === $match) {

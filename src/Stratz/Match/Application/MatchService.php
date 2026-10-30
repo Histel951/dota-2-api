@@ -28,7 +28,7 @@ final readonly class MatchService
      *
      * @throws SourceRequestException
      */
-    public function getMatch(MatchId $id, bool $withPlaybackData = true): MatchFetchResult
+    public function getMatch(MatchId $id, bool $withPlaybackData = false): MatchFetchResult
     {
         try {
             return new MatchFetchResult($id, $this->source->getMatch($id, $withPlaybackData), null);
@@ -46,7 +46,7 @@ final readonly class MatchService
      * @param bool $withPlaybackData false — без playbackData (байбеки)
      * @return Generator<int, MatchFetchResult, mixed, void>
      */
-    public function getMatches(array $ids, int $concurrency = 5, bool $withPlaybackData = true): Generator
+    public function getMatches(array $ids, int $concurrency = 5, bool $withPlaybackData = false): Generator
     {
         foreach ($this->source->getMatches($ids, $concurrency, $withPlaybackData) as $id => $outcome) {
             yield $outcome instanceof MatchDetail
