@@ -14,7 +14,7 @@ final class Team
     public function __construct(
         private readonly TeamId            $id,
         private readonly ?TeamName         $name,
-        private readonly TeamTag           $tag,
+        private readonly ?TeamTag          $tag,
         private readonly TeamStats         $stats,
         private readonly DateTimeImmutable $lastMatchTime,
     )
@@ -31,7 +31,7 @@ final class Team
         return $this->name;
     }
 
-    public function getTag(): TeamTag
+    public function getTag(): ?TeamTag
     {
         return $this->tag;
     }

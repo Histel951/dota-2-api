@@ -11,7 +11,7 @@ final readonly class TeamPlayer
 {
     public function __construct(
         private PlayerId     $playerId,
-        private PlayerName   $playerProName,
+        private ?PlayerName  $playerProName,
         private WinrateStats $playerStats,
         private bool         $isCurrentTeamMember,
     )
@@ -23,7 +23,7 @@ final readonly class TeamPlayer
         return $this->playerId;
     }
 
-    public function getPlayerProName(): PlayerName
+    public function getPlayerProName(): ?PlayerName
     {
         return $this->playerProName;
     }
