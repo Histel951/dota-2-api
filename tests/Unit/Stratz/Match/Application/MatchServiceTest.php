@@ -30,7 +30,7 @@ class MatchServiceTest extends TestCase
     {
         $id = new MatchId(9026055036);
         $match = $this->createMatch();
-        $this->source->expects($this->once())->method('getMatch')->with($id)->willReturn($match);
+        $this->source->expects($this->once())->method('getMatch')->with($id, false)->willReturn($match);
 
         $result = $this->service->getMatch($id);
 
@@ -99,7 +99,7 @@ class MatchServiceTest extends TestCase
         $this->source
             ->expects($this->once())
             ->method('getMatches')
-            ->with($ids, 5)
+            ->with($ids, 5, false)
             ->willReturnCallback(static function (): Generator {
                 yield from [];
             });
@@ -113,12 +113,35 @@ class MatchServiceTest extends TestCase
         $this->source
             ->expects($this->once())
             ->method('getMatches')
-            ->with($ids, 2)
+            ->with($ids, 2, false)
             ->willReturnCallback(static function (): Generator {
                 yield from [];
             });
 
         $this->assertSame([], iterator_to_array($this->service->getMatches($ids, 2), false));
+    }
+
+    public function test_getMatchPassesWithoutPlaybackDataFlag()
+    {
+        $id = new MatchId(9026055036);
+        $match = $this->createMatch();
+        $this->source->expects($this->once())->method('getMatch')->with($id, false)->willReturn($match);
+
+        $this->assertSame($match, $this->service->getMatch($id, false)->getMatchDetail());
+    }
+
+    public function test_getMatchesPassesWithoutPlaybackDataFlag()
+    {
+        $ids = [new MatchId(1)];
+        $this->source
+            ->expects($this->once())
+            ->method('getMatches')
+            ->with($ids, 3, false)
+            ->willReturnCallback(static function (): Generator {
+                yield from [];
+            });
+
+        $this->assertSame([], iterator_to_array($this->service->getMatches($ids, 3, false), false));
     }
 
     public function test_getMatchesKeepsDuplicateIds()

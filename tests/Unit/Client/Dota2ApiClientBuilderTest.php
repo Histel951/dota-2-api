@@ -41,7 +41,7 @@ class Dota2ApiClientBuilderTest extends TestCase
     public function test_defaultMatchRolesComeFromPositionEst()
     {
         $data = json_decode(file_get_contents(self::FIXTURE), true);
-        // эвристика даёт TIGER = OFFLANE, fy = SUPPORT; position_est переставлен
+        // в фикстуре TIGER = OFFLANE, fy = SUPPORT; position_est переставлен
         foreach ($data['players'] as &$player) {
             if (self::TIGER === $player['account_id']) {
                 $player['position_est'] = 4;
@@ -65,7 +65,7 @@ class Dota2ApiClientBuilderTest extends TestCase
         $this->assertSame(['https://api.opendota.com/api/matches/8794744726'], $this->requested);
     }
 
-    public function test_defaultMatchRolesFallBackToHeuristicWithoutPositionEst()
+    public function test_defaultMatchRolesAreUnknownWithoutPositionEst()
     {
         $data = json_decode(file_get_contents(self::FIXTURE), true);
         foreach ($data['players'] as &$player) {
@@ -82,8 +82,7 @@ class Dota2ApiClientBuilderTest extends TestCase
         foreach ($result->getMatchDetail()->getPlayers()->getValue() as $p) {
             $roles[$p->getIdentity()->getPlayerId()->toInt()] = $p->getRole()->getValue();
         }
-        $this->assertSame(PlayerRole::OFFLANE, $roles[self::TIGER]);
-        $this->assertSame(PlayerRole::SUPPORT, $roles[self::FY]);
+        $this->assertSame(array_fill(0, 10, PlayerRole::UNKNOWN), array_values($roles));
     }
 
     public function test_getMatchesGoesThroughBuiltClient()

@@ -16,10 +16,10 @@
 
 - **Источник = bounded context.** `OpenDota/` и `Stratz/` — у каждого свои `Match/{Domain,Application,Port}`, `Team/{Domain,Port}`, `Infrastructure/` и клиент (`OpenDotaClient`, `StratzClient`). Источники друг на друга не ссылаются; внутри источника Match и Team друг от друга не зависят.
 - **`SharedKernel` — только одинаковое по смыслу у источников** (ids, имена, длительность, время старта, регион Valve, сторона, KDA/GPM/XPM, `Counter`, `WinrateStats`, драфт). Похожее, но разное по смыслу (линия: абсолютная у OpenDota, относительная у STRATZ; роль vs позиция; статистика игрока; команда) — у каждого источника своё. Перед переносом в `SharedKernel` проверь, что значение действительно совпадает у обоих источников (на одном и том же матче).
-- Общий `Infrastructure/` (`Http`, `Mapping`) не знает про источники; транспорт источника (`ApiGateway`, `GraphQlGateway`) — в `<Source>/Infrastructure/`.
+- Общий `Infrastructure/` (`Http`, `Mapping`) не знает про источники; транспорт источника (`ApiGateway`, `GraphQlGateway`) — в `<Source>/Infrastructure/`. Окно параллельных запросов — общий `Infrastructure\Http\ConcurrentRequests`, своё окно в адаптере не пишется.
 - Папка по **понятию**, а не по типу: `<Source>/Match/Domain/Player`, `Player/Stats`, `Side`, `<Source>/Team/Domain/History`, `Roster`, `Heroes` — а не `ValueObjects`, `Enums`.
 - Исключения контекста — в его `Exception/` (`<Source>/Match/Domain/Exception`, `<Source>/Team/Domain/Exception`) и наследуют `SharedKernel\Exception\DomainException`.
-- Порт — в `<Source>/<Context>/Port`, оркестрация (роли, обёртка ошибок) — в `<Source>/<Context>/Application`, адаптер — в `<Source>/Infrastructure/<Context>`.
+- Порт — в `<Source>/<Context>/Port`, оркестрация (обёртка ошибок) — в `<Source>/<Context>/Application`, адаптер — в `<Source>/Infrastructure/<Context>`.
 - Правила зависимостей — в [architecture.md](architecture.md), проверяются `LayerDependenciesTest`.
 
 ## Добавить новый показатель игрока в матче
@@ -32,7 +32,7 @@
 2. Добавить поле и геттер в подходящую группу статистики (`CreepsStats`, `WardingStats`, `UtilityStats`, ... в `OpenDota/Match/Domain/Player/Stats/`).
 3. Добавить ключ из ответа OpenDota в `OpenDota/Infrastructure/Match/MatchExtractor::PLAYER_FIELDS`. **Без этого шага поле до маппера не дойдёт.** Имя ключа берётся из фикстуры или из вывода `php tools/refresh-opendota-fixtures.php`, не по памяти: `MatchSourceFieldsTest` упадёт, если ключа из `PLAYER_FIELDS` нет в фикстуре. Вложенный ключ (`item_uses.<item>`) читается в маппере напрямую, его нужно добавить в `tests/Support/OpenDota/SourceFieldsChecker` (`MATCH_PLAYER_NESTED_ANY`) руками.
 4. Заполнить поле в `OpenDota/Infrastructure/Match/PlayerMapper::map()`.
-5. Если добавляется новая группа в `MatchPlayerPerformance`, не забыть `withRole()`: он пересоздаёт объект со всеми полями. Также обновить хелперы `createPlayer()` в `ProSceneRoleResolverTest` и `MatchDetailTest`.
+5. Если добавляется новая группа в `MatchPlayerPerformance`, обновить хелпер `createPlayer()` в `tests/Unit/OpenDota/Match/Domain/MatchDetailTest`.
 6. Тесты: значение на фикстуре в `tests/Unit/OpenDota/Infrastructure/Match/PlayerMapperTest` и ожидание в `MatchMapperTest::playersProvider()` (данные из `tests/Fixtures/opendota/`).
 
 ### STRATZ
@@ -59,7 +59,7 @@
 
 ### STRATZ
 
-1. Проверить запрос живьём (токен, `User-Agent: STRATZ_API`, лимит 150/мин): поля, `null` у нераспарсенных/старых данных, окно groupBy.
+1. Проверить запрос живьём (токен, `User-Agent: STRATZ_API`, лимит 150/мин): поля, `null` у нераспарсенных/старых данных, окно groupBy (`take` — окно матчей, а не число групп; см. `TeamQuery::GROUP_BY_TAKE`).
 2. Метод в порте `Stratz/<Context>/Port/*SourceInterface`; сущность и VO в `Stratz/<Context>/Domain/...` — то, что STRATZ реально отдаёт (nullable, где источник даёт `null`).
 3. Запрос — константа в `Stratz/Infrastructure/<Context>/*Query` (переменные, а не подстановка строк).
 4. Маппер `Stratz/Infrastructure/<Context>/*Mapper extends AbstractMapper`; контекст, которого нет в строке ответа (например `teamId`), источник подмешивает в строку перед маппингом.
@@ -69,7 +69,7 @@
 
 ## Тесты
 
-- Структура `tests/Unit/` повторяет `src/` (`OpenDota/Match/Domain/Role`, `OpenDota/Infrastructure/{Match,Team}`, `Stratz/Match/Application`, `Stratz/Infrastructure/{Match,Team}`, ...).
+- Структура `tests/Unit/` повторяет `src/` (`Infrastructure/Http`, `OpenDota/Infrastructure/{Match,Team}`, `Stratz/Match/Application`, `Stratz/Infrastructure/{Match,Team}`, ...).
 - `tests/Unit/Architecture/LayerDependenciesTest` проверяет правила зависимостей слоёв по всему `src/`; новый верхнеуровневый namespace — в `COMMON_LAYERS`, новый источник — в `SOURCES`.
 - HTTP мокается через `Symfony\Component\HttpClient\MockHttpClient`, без сети.
 - Для 404/429/5xx/таймаутов gateway в тестах собирается как в проде: OpenDota — `new ApiGateway(OpenDotaHttpClientFactory::create(new MockHttpClient(...), $config))` (образец — `OpenDotaMatchSourceTest::createSource()`), STRATZ — `new GraphQlGateway(StratzHttpClientFactory::create(...))` (образец — `StratzMatchSourceTest`), иначе ретраи и ошибки потока не проверяются. `maxRetries` в таких тестах — 1–2 (задержки настоящие). `MatchService` тестируется с моком своего `MatchSourceInterface`.

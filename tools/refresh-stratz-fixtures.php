@@ -117,8 +117,8 @@ $gateway = new GraphQlGateway(
 );
 
 $teamVariables = ['teamId' => TEAM_ID];
-$matchA = MatchQuery::build([new MatchId(9026055036)]);
-$matchB = MatchQuery::build([new MatchId(8794744726)]);
+$matchA = MatchQuery::build([new MatchId(9026055036)], withPlaybackData: true);
+$matchB = MatchQuery::build([new MatchId(8794744726)], withPlaybackData: true);
 
 /**
  * Цели: фикстура, запрос, переменные, путь корневого поля для KeyDiff, список ли matches (обрезка), матч ли.

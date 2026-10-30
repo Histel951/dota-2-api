@@ -7,3 +7,6 @@ dota2_api:
   stratz:
     base_url: 'https://api.stratz.com/graphql'
     token: '%env(default::STRATZ_TOKEN)%'     # Bearer-токен STRATZ; без него запросы получают 403
+    # Лимит запросов к STRATZ в минуту (min 1), ретраи тоже расходуют лимит; null (по умолчанию) — без лимитера.
+    # Лимит действует в пределах одного процесса: при N воркерах берите ~140 / N (у STRATZ 150/мин).
+    # rate_limit: 140

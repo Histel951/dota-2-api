@@ -46,6 +46,11 @@ final class Configuration implements ConfigurationInterface
             ->scalarNode('token')
             ->defaultNull()
             ->end()
+            ->integerNode('rate_limit')
+            ->info('Лимит запросов к STRATZ в минуту, включая ретраи; null — без лимитера')
+            ->min(1)
+            ->defaultNull()
+            ->end()
             ->end()
             ->end()
             ->end();

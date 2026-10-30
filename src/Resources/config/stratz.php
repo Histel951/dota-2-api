@@ -34,6 +34,7 @@ return static function (ContainerConfigurator $configurator): void {
             '$apiKey' => param('dota2_api.stratz.token'),
             '$timeout' => param('dota2_api.timeout'),
             '$maxRetries' => param('dota2_api.max_retries'),
+            '$rateLimitPerMinute' => param('dota2_api.stratz.rate_limit'),
         ]);
 
     // собственный клиент бандла — глобальный http_client приложения не подменяется

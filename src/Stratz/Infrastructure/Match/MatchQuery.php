@@ -10,8 +10,17 @@ use Histel951\Dota2Api\SharedKernel\MatchId;
  */
 final class MatchQuery
 {
-    /** Матчей в одном запросе: playbackData STRATZ пересобирает из реплея не более одного незакэшированного матча за запрос */
-    public const int BATCH_SIZE = 1;
+    /**
+     * Матчей в одном запросе с playbackData: STRATZ пересобирает playbackData из реплея не более чем
+     * для одного незакэшированного матча за запрос, поэтому такие запросы идут по одному матчу
+     */
+    public const int BATCH_SIZE_WITH_PLAYBACK = 1;
+
+    /** Матчей в одном запросе без playbackData */
+    public const int BATCH_SIZE = 5;
+
+    /** Поля playbackData внутри FIELDS (только из них берутся байбеки); вырезаются в режиме без playbackData */
+    public const string PLAYBACK_FIELDS = 'playbackData { buyBackEvents { time } }';
 
     /** Поля матча: единственное место, из которого строятся запрос и мапперы */
     public const string FIELDS = <<<'GRAPHQL'
@@ -37,10 +46,11 @@ GRAPHQL;
 
     /**
      * @param non-empty-list<MatchId> $ids
+     * @param bool $withPlaybackData false — фрагмент без PLAYBACK_FIELDS (байбеки не запрашиваются)
      *
      * @return array{query: string, variables: array<string, int>}
      */
-    public static function build(array $ids): array
+    public static function build(array $ids, bool $withPlaybackData = false): array
     {
         $declarations = [];
         $selections = [];
@@ -58,10 +68,28 @@ GRAPHQL;
                 "query Matches(%s) {\n  %s\n}\n%s",
                 implode(', ', $declarations),
                 implode("\n  ", $selections),
-                self::FIELDS,
+                self::fragment($withPlaybackData),
             ),
             'variables' => $variables,
         ];
+    }
+
+    /**
+     * Фрагмент MatchFields: FIELDS целиком или FIELDS без PLAYBACK_FIELDS
+     */
+    public static function fragment(bool $withPlaybackData): string
+    {
+        return $withPlaybackData ? self::FIELDS : str_replace(self::PLAYBACK_FIELDS, '', self::FIELDS);
+    }
+
+    /**
+     * Матчей в одном запросе для режима
+     *
+     * @return positive-int
+     */
+    public static function batchSize(bool $withPlaybackData): int
+    {
+        return $withPlaybackData ? self::BATCH_SIZE_WITH_PLAYBACK : self::BATCH_SIZE;
     }
 
     /**

@@ -56,7 +56,7 @@ class OpenDotaSourceFactoryTest extends TestCase
 
     public function test_matchSourceDoesNotResolveRoles()
     {
-        // фабрика без резолвера: роли выставляет MatchService
+        // роли только из position_est: без него UNKNOWN
         $data = json_decode(file_get_contents(self::FIXTURE), true);
         foreach ($data['players'] as &$player) {
             unset($player['position_est']);

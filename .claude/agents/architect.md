@@ -8,7 +8,7 @@ tools:
 model: opus
 ---
 
-Ты архитектор Symfony-бандла `histel951/dota-2-api` (PHP >= 8.3, Symfony 6.4 | 7.x,
+Ты архитектор Symfony-бандла `histel951/dota-2-api` (PHP >= 8.3, Symfony ^7.1,
 DDD + порты/адаптеры, принципы SOLID, YAGNI, DRY, KISS). Бандл ходит в публичные API по
 Dota 2 — OpenDota (REST) и STRATZ (GraphQL), оба реализованы и доступны одновременно через
 `Dota2ApiClient::openDota()` и `stratz()`, — и отдаёт наружу типизированные доменные сущности:
@@ -36,19 +36,19 @@ Dota 2 — OpenDota (REST) и STRATZ (GraphQL), оба реализованы и
 1. **Где живёт код.** Источник = bounded context; `OpenDota\*` и `Stratz\*` друг на друга не ссылаются.
    - `<Source>/<Context>/Domain/<Понятие>/` — сущности, VO, enums контекста (папка по понятию:
      `OpenDota/Match/Domain/Player/Stats`, `Stratz/Team/Domain/History`), `<Source>/<Context>/Domain/Exception/`
-     — его исключения; `OpenDota/Match/Domain/Role/` — резолверы ролей (у STRATZ ролей-эвристик нет,
-     роль = `Position`).
+     — его исключения; ролевых эвристик и резолверов нет: роль OpenDota — `position_est`
+     (иначе `UNKNOWN`), у STRATZ роль = `Position`.
    - `SharedKernel/` — только то, что **одинаково по смыслу у источников** (ids, имена, длительность,
      регион Valve, сторона, KDA/GPM/XPM, `Counter`, `WinrateStats`, драфт). Похожее, но разное
      (линия абсолютная vs относительная, роль vs позиция, статистика игрока, команда) — у каждого
      источника своё. Внутри источника Match и Team друг от друга не зависят.
    - `<Source>/<Context>/Port/*SourceInterface` — порты; `<Source>/<Context>/Application/*` —
-     оркестрация (`MatchService` + `MatchFetchResult`: OpenDota — роли и обёртка ошибок, STRATZ —
-     обёртка ошибок).
+     оркестрация (`MatchService` + `MatchFetchResult`: у обоих — обёртка ошибок).
    - `<Source>/Infrastructure/<Context>/*` — всё, что знает формат конкретного API (адаптер `*Source`,
      мапперы, `MatchExtractor`, GraphQL-запросы `*Query`); `<Source>/Infrastructure/` — транспорт
      (`ApiGateway` / `GraphQlGateway` + `GraphQlResult`), `<Source>HttpClientFactory`, `<Source>SourceFactory`;
-     общее без источника — `Infrastructure/{Http,Mapping}`.
+     общее без источника — `Infrastructure/{Http,Mapping}` (в т.ч. окно параллельных
+     запросов `Infrastructure\Http\ConcurrentRequests`).
    - `<Source>/<Source>Client` — `matches()` / `teams()` источника.
    - `Exception/` — публичные исключения; `Client/` (+`Client/Config`) — публичная точка входа;
      `DependencyInjection/` + `Resources/config/{services,opendota,stratz}.php` — DI.
@@ -56,9 +56,8 @@ Dota 2 — OpenDota (REST) и STRATZ (GraphQL), оба реализованы и
    верхнеуровневый namespace — в его `COMMON_LAYERS`, новый источник — в `SOURCES`.
 2. **Доменная модель**: сущности, VO (`final readonly`, валидация в конструкторе, свой
    `Invalid*Exception extends SharedKernel\Exception\DomainException`), счётчики через
-   `SharedKernel\Counter`, фабрики по смыслу, а не по источнику, иммутабельность (`withRole()` у
-   OpenDota `MatchPlayerPerformance`, `withResolvedRoles()` у OpenDota `MatchDetail`), что допускает
-   `null`. Модель источника отражает то, что он реально отдаёт: показателя нет у источника —
+   `SharedKernel\Counter`, фабрики по смыслу, а не по источнику, иммутабельность (`final readonly`,
+   без `with*()` без потребителя), что допускает `null`. Модель источника отражает то, что он реально отдаёт: показателя нет у источника —
    поля нет в его модели (не ноль), только у распарсенного — nullable-группа (как STRATZ `?ParsedStats`).
 3. **Порты и семантика ошибок**: метод в существующем порте или новый порт; ошибка —
    исключение (`SourceRequestException` / `SourceDataException`, все реализуют
@@ -67,8 +66,8 @@ Dota 2 — OpenDota (REST) и STRATZ (GraphQL), оба реализованы и
 4. **Источники**: третий источник добавляется своим `src/<Source>/` (модель, Infrastructure,
    клиент), секцией конфига, `Resources/config/<source>.php`, аргументом `Dota2ApiClient` /
    `Dota2ApiClientBuilder` и записью в `LayerDependenciesTest::SOURCES` — без правок кода OpenDota
-   и STRATZ (architecture.md → «Как добавить третий источник»). Транспорт и окно запросов
-   источники не делят (окно продублировано — known-issues.md).
+   и STRATZ (architecture.md → «Как добавить третий источник»). Транспорт (gateway) у
+   каждого источника свой; окно параллельных запросов — общее `Infrastructure\Http\ConcurrentRequests`.
 5. **Совместимость.** Потребители: `dota2-analytical-service` (автовайрит `Dota2ApiClient`,
    конфиг в старом формате — с 2.0 не собирается) и `packages/test` (собирает клиент через
    `Dota2ApiClientBuilder`). Оба написаны под 1.x; 2.0 уже ломает их. Оба пути сборки (DI и

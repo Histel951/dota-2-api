@@ -44,11 +44,12 @@ model: sonnet
 3. **Порты.** В `<Source>/<Context>/Port/*SourceInterface` только доменные типы своего контекста,
    `SharedKernel` и `Exception`, `@throws SourceRequestException|SourceDataException`;
    реализации — в `<Source>/Infrastructure/<Context>/*Source`, подключены через
-   `<Source>SourceFactory`. Роли резолвит только OpenDota `MatchService`.
+   `<Source>SourceFactory`. Пакетная загрузка — через общий `Infrastructure\Http\ConcurrentRequests`,
+   а не свой цикл окна в адаптере.
 4. **Value Objects и сущности.** `final readonly`, валидация в конструкторе, свой
    `Invalid*Exception extends SharedKernel\Exception\DomainException`; счётчики через
-   `SharedKernel\Counter`; иммутабельность (OpenDota `withRole()` пересоздаёт все поля, новое
-   поле не потеряно); `null` только там, где он осмыслен по данным (матч без команды,
+   `SharedKernel\Counter`; иммутабельность (`final readonly`, без мутаторов); `null` только там,
+   где он осмыслен по данным (матч без команды,
    нераспарсенный матч STRATZ); показатель, которого источник не даёт, — отсутствует, а не 0.
 5. **Маппинг.** `REQUIRED_FIELDS` / `OPTIONAL_FIELDS` у мапперов на `AbstractMapper`;
    ошибки данных (`DomainException|TypeError|ValueError`) обёрнуты в `SourceDataException` в

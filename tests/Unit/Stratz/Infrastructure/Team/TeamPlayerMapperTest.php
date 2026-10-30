@@ -23,14 +23,24 @@ class TeamPlayerMapperTest extends TestCase
     {
         $players = $this->mapper->toCollection($this->rows());
 
-        $this->assertCount(11, $players);
-        $this->assertSame('898754153', $players[0]->getPlayerId()->getValue());
-        $this->assertSame('Ame', $players[0]->getName()?->getValue());
-        $this->assertSame(100, $players[0]->getStats()->getGamesPlayed());
-        $this->assertSame(46, $players[0]->getStats()->getGamesWon());
+        $this->assertCount(39, $players);
+        $this->assertSame('1069390564', $players[0]->getPlayerId()->getValue());
+        $this->assertSame('AtlanTiS', $players[0]->getName()?->getValue());
+        $this->assertSame(30, $players[0]->getStats()->getGamesPlayed());
+        $this->assertSame(16, $players[0]->getStats()->getGamesWon());
     }
 
-    public function test_currentRosterIsAmeXinQXmXxs()
+    public function test_ameHasWholeTeamHistory()
+    {
+        $player = $this->mapper->toEntity($this->rowBySteamId(898754153));
+
+        $this->assertSame('Ame', $player->getName()?->getValue());
+        $this->assertSame(680, $player->getStats()->getGamesPlayed());
+        $this->assertSame(386, $player->getStats()->getGamesWon());
+        $this->assertTrue($player->isCurrentMember());
+    }
+
+    public function test_currentMembersAreProAccountsOfTheTeam()
     {
         $current = [];
         foreach ($this->mapper->toCollection($this->rows()) as $player) {
@@ -39,7 +49,10 @@ class TeamPlayerMapperTest extends TestCase
             }
         }
 
-        $this->assertEqualsCanonicalizing(['Ame', 'XinQ', 'Xm', 'Xxs'], $current);
+        $this->assertEqualsCanonicalizing(
+            ['Ame', 'Undyne_', 'lou', '天命', 'XinQ', 'b a b', 'Dy', 'Pyw', 'Xm', 'Xxs', 'bLink', 'Poloson'],
+            $current,
+        );
     }
 
     public function test_playerOfAnotherTeamIsFormer()

@@ -1,6 +1,6 @@
 ---
 name: test-writer
-description: "Пишет PHPUnit-тесты для бандла dota-api по обоим источникам (OpenDota, STRATZ): VO SharedKernel и доменов источников, доменные сервисы (ProSceneRoleResolver, PrefilledRoleResolver, MatchDetail::withResolvedRoles), MatchService с моком MatchSourceInterface, мапперы на реальных фикстурах tests/Fixtures/{opendota,stratz}, источники OpenDota*Source / Stratz*Source с gateway как в проде (ApiGateway / GraphQlGateway) или моками, транспорт STRATZ (GraphQlGateway, GraphQlResult, StratzHttpClientFactory), DI-расширение, Builder, архитектурный тест. Используй при реализации фичи или фиксе бага, которым нужно покрытие."
+description: "Пишет PHPUnit-тесты для бандла dota-api по обоим источникам (OpenDota, STRATZ): VO SharedKernel и доменов источников, MatchService с моком MatchSourceInterface, мапперы на реальных фикстурах tests/Fixtures/{opendota,stratz}, источники OpenDota*Source / Stratz*Source с gateway как в проде (ApiGateway / GraphQlGateway) или моками, транспорт STRATZ (GraphQlGateway, GraphQlResult, StratzHttpClientFactory), DI-расширение, Builder, архитектурный тест. Используй при реализации фичи или фиксе бага, которым нужно покрытие."
 tools:
   - Read
   - Edit
@@ -25,19 +25,19 @@ OpenDota (`tests/Unit/OpenDota/`):
 - источник с gateway как в проде (`OpenDotaHttpClientFactory` + `MockHttpClient`; 404/429/5xx, таймауты, пакетная загрузка) — `Infrastructure/Match/OpenDotaMatchSourceTest.php` (`createSource()`);
 - источник с моками gateway и мапперов — `Infrastructure/Team/OpenDotaTeamSourceTest.php`;
 - Application с моком порта — `Match/Application/MatchServiceTest.php`;
-- доменный сервис на синтетических данных — `Match/Domain/Role/ProSceneRoleResolverTest.php`, агрегат — `Match/Domain/MatchDetailTest.php`;
+- роли из `position_est` на фикстуре и синтетике — `Infrastructure/Match/MatchMapperPositionEstTest.php`, агрегат — `Match/Domain/MatchDetailTest.php`;
 - HTTP-клиент — `Infrastructure/OpenDotaHttpClientFactoryTest.php`.
 
 STRATZ (`tests/Unit/Stratz/`):
 
-- транспорт — `Infrastructure/{GraphQlGatewayTest, GraphQlResultTest, StratzHttpClientFactoryTest}.php` (статусы, `errors`, частичный ответ, Bearer и `User-Agent: STRATZ_API`, ретраи POST);
+- транспорт — `Infrastructure/{GraphQlGatewayTest, GraphQlResultTest, StratzHttpClientFactoryTest}.php` (статусы, `errors`, частичный ответ, Bearer и `User-Agent: STRATZ_API`, ретраи POST, лимитер `rateLimitPerMinute`);
 - запрос — `Infrastructure/Match/MatchQueryTest.php`;
 - мапперы на реальной фикстуре — `Infrastructure/Match/{MatchMapperTest, PlayerMapperTest, LaneMapperTest, DraftMapperTest}.php`, `Infrastructure/Team/Team*MapperTest.php`; фикстуры читает `tests/Support/Stratz/StratzFixtures` (`PARSED_MATCH_ID = 9026055036`, `UNPARSED_MATCH_ID = 8794744726`);
-- источник с gateway как в проде (`StratzHttpClientFactory` + `MockHttpClient`; пачки, `concurrency`, null-алиас, обрыв, 403, `errors`) — `Infrastructure/Match/StratzMatchSourceTest.php`, `Infrastructure/Team/StratzTeamSourceTest.php`;
+- источник с gateway как в проде (`StratzHttpClientFactory` + `MockHttpClient`; пачки с `playbackData` и без, `concurrency`, null-алиас, обрыв, 403, `errors`) — `Infrastructure/Match/StratzMatchSourceTest.php`, `Infrastructure/Team/StratzTeamSourceTest.php`;
 - Application с моком порта — `Match/Application/MatchServiceTest.php`; агрегат — `Match/Domain/{MatchDetailTest, TeamSideTest}.php`; VO — `Match/Domain/Player/Stats/StunDurationTest.php`, `Team/Domain/History/ScoreTest.php`;
 - фабрика и клиент — `Infrastructure/StratzSourceFactoryTest.php`, `StratzClientTest.php`.
 
-Общие: DI — `tests/Unit/DependencyInjection/Dota2ApiExtensionTest.php`, Builder — `tests/Unit/Client/Dota2ApiClientBuilderTest.php`, SharedKernel — `tests/Unit/SharedKernel/`, дифф ключей — `tests/Unit/Support/KeyDiffTest.php` (`tests/Support/KeyDiff`), правила слоёв — `tests/Unit/Architecture/LayerDependenciesTest.php`.
+Общие: DI — `tests/Unit/DependencyInjection/Dota2ApiExtensionTest.php`, Builder — `tests/Unit/Client/Dota2ApiClientBuilderTest.php`, SharedKernel — `tests/Unit/SharedKernel/`, дифф ключей — `tests/Unit/Support/KeyDiffTest.php` (`tests/Support/KeyDiff`), правила слоёв — `tests/Unit/Architecture/LayerDependenciesTest.php`, окно параллельных запросов — `tests/Unit/Infrastructure/Http/ConcurrentRequestsTest.php` (окно, отвергнутый запрос, обрыв/таймаут, ранний выход).
 
 ## Правила
 
@@ -68,14 +68,14 @@ STRATZ (`tests/Unit/Stratz/`):
    `Lane::UNKNOWN`); `playbackData = null` → `buybacks` null; матч без команд; сторона Dire;
    ошибки `SourceRequestException` (404 / null-алиас, 403, 429, 5xx, таймаут, GraphQL `errors`);
    в `getMatches()` ошибка одного матча — значением в `getError()`, остальные отдаются (STRATZ: сбой
-   запроса — у всех id пачки); OpenDota: ошибка ролей — `DomainException` в `getError()`.
+   запроса — у всех id пачки); OpenDota: нет/невалидный `position_est` → `UNKNOWN` у этого игрока, матч маппится.
    Если оркестратор передал матрицу краевых случаев — каждая строка покрыта тестом;
    непокрытые перечисли в отчёте с причиной.
 6. Тесты независимы: прогон идёт с `--order-by random`, порядок не закладываем.
 7. `phpunit.xml.dist` падает на warnings, deprecations и risky — тест без ассертов или с
    deprecation считается провалом.
-8. При изменении OpenDota `MatchPlayerPerformance` обнови хелперы `createPlayer()` в
-   `ProSceneRoleResolverTest`, `PrefilledRoleResolverTest` и `MatchDetailTest`, ожидания в
+8. При изменении OpenDota `MatchPlayerPerformance` обнови хелпер `createPlayer()` в
+   `MatchDetailTest`, ожидания в
    `PlayerMapperTest` и `MatchMapperTest::playersProvider()`. При изменении STRATZ `MatchPlayer` /
    `ParsedStats` — `createPlayer()` в `Stratz/Match/Domain/{MatchDetailTest, TeamSideTest}` и
    `createRaw()` в `Stratz/Infrastructure/Match/PlayerMapperTest`.

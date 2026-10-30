@@ -13,11 +13,7 @@ use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
 use Histel951\Dota2Api\OpenDota\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\MatchPlayerPerformance;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\PlayerRole;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\PrefilledRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\OpenDota\Match\Port\MatchSourceInterface;
-use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\SharedKernel\MatchId;
 use PHPUnit\Framework\TestCase;
 
@@ -25,18 +21,20 @@ class MatchServiceTest extends TestCase
 {
     private const string FIXTURE = __DIR__ . '/../../../../Fixtures/opendota/match_8794744726.json';
 
-    private const int TIGER = 98887913; // radiant, pos3 (эвристика даёт то же)
+    private const int TIGER = 98887913; // radiant, pos3
+    private const int NOTHING_TO_SAY = 173978074; // radiant, pos2
 
-    public function test_getMatchReturnsMatchWithResolvedRoles()
+    public function test_getMatchReturnsMatchFromSourceAsIs()
     {
+        $match = $this->mappedMatch();
         $source = $this->createMock(MatchSourceInterface::class);
-        $source->expects($this->once())->method('getMatch')->willReturn($this->unresolvedMatch());
-        $service = new MatchService($source, new ProSceneRoleResolver());
+        $source->expects($this->once())->method('getMatch')->willReturn($match);
 
-        $result = $service->getMatch(new MatchId(8794744726));
+        $result = (new MatchService($source))->getMatch(new MatchId(8794744726));
 
         $this->assertNull($result->getError());
         $this->assertSame(8794744726, $result->getMatchId()->getValue());
+        $this->assertSame($match, $result->getMatchDetail());
         $this->assertSame(PlayerRole::OFFLANE, $this->roles($result->getMatchDetail())[self::TIGER]);
     }
 
@@ -44,45 +42,9 @@ class MatchServiceTest extends TestCase
     {
         $id = new MatchId(8794744726);
         $source = $this->createMock(MatchSourceInterface::class);
-        $source->expects($this->once())->method('getMatch')->with($id)->willReturn($this->unresolvedMatch());
+        $source->expects($this->once())->method('getMatch')->with($id)->willReturn($this->mappedMatch());
 
-        (new MatchService($source, new ProSceneRoleResolver()))->getMatch($id);
-    }
-
-    public function test_getMatchUsesGivenResolver()
-    {
-        $source = $this->createStub(MatchSourceInterface::class);
-        $source->method('getMatch')->willReturn($this->unresolvedMatch());
-        $resolver = $this->createMock(RoleResolverInterface::class);
-        $resolver->expects($this->exactly(2))->method('resolve')->willReturnArgument(0);
-
-        $result = (new MatchService($source, $resolver))->getMatch(new MatchId(8794744726));
-
-        $this->assertNull($result->getError());
-        $this->assertNotNull($result->getMatchDetail());
-    }
-
-    public function test_getMatchKeepsPositionEstRolesWithPrefilledResolver()
-    {
-        $match = $this->unresolvedMatch(static function (array $data): array {
-            foreach ($data['players'] as &$player) {
-                if (self::TIGER === $player['account_id']) {
-                    $player['position_est'] = 3;
-                } elseif (101695162 === $player['account_id']) {
-                    $player['position_est'] = 4;
-                }
-            }
-
-            return $data;
-        });
-        $source = $this->createStub(MatchSourceInterface::class);
-        $source->method('getMatch')->willReturn($match);
-
-        $result = (new MatchService($source, new PrefilledRoleResolver(new ProSceneRoleResolver())))
-            ->getMatch(new MatchId(8794744726));
-
-        $this->assertSame(PlayerRole::OFFLANE, $this->roles($result->getMatchDetail())[self::TIGER]);
-        $this->assertSame(PlayerRole::SUPPORT, $this->roles($result->getMatchDetail())[101695162]);
+        (new MatchService($source))->getMatch($id);
     }
 
     public function test_getMatchReturnsSourceDataExceptionInResult()
@@ -91,7 +53,7 @@ class MatchServiceTest extends TestCase
         $source = $this->createStub(MatchSourceInterface::class);
         $source->method('getMatch')->willThrowException($error);
 
-        $result = (new MatchService($source, new ProSceneRoleResolver()))->getMatch(new MatchId(5));
+        $result = (new MatchService($source))->getMatch(new MatchId(5));
 
         $this->assertNull($result->getMatchDetail());
         $this->assertSame($error, $result->getError());
@@ -106,19 +68,23 @@ class MatchServiceTest extends TestCase
         $this->expectException(SourceRequestException::class);
         $this->expectExceptionMessage('Object not found');
 
-        (new MatchService($source, new ProSceneRoleResolver()))->getMatch(new MatchId(5));
+        (new MatchService($source))->getMatch(new MatchId(5));
     }
 
-    public function test_getMatchReturnsResolverErrorInResult()
+    public function test_getMatchWithoutPositionEstAndNoMiddleReturnsMatchWithUnknownRoles()
     {
+        // раньше эвристика падала на такой раскладке с DomainException
         $source = $this->createStub(MatchSourceInterface::class);
-        $source->method('getMatch')->willReturn($this->unresolvedMatch(self::withoutPositionAndOnLaneOne(...)));
+        $source->method('getMatch')->willReturn($this->mappedMatch(self::withoutPositionAndNoMiddle(...)));
 
-        $result = (new MatchService($source, new ProSceneRoleResolver()))->getMatch(new MatchId(8794744726));
+        $result = (new MatchService($source))->getMatch(new MatchId(8794744726));
 
-        $this->assertNull($result->getMatchDetail());
-        $this->assertInstanceOf(DomainException::class, $result->getError());
-        $this->assertSame(8794744726, $result->getMatchId()->getValue());
+        $this->assertNull($result->getError());
+        $this->assertNotNull($result->getMatchDetail());
+        $this->assertSame(
+            array_fill(0, 10, PlayerRole::UNKNOWN),
+            array_values($this->roles($result->getMatchDetail())),
+        );
     }
 
     public function test_getMatchesReturnsResultPerMatchForMixedStream()
@@ -128,18 +94,15 @@ class MatchServiceTest extends TestCase
         $source = $this->createStub(MatchSourceInterface::class);
         $source->method('getMatches')->willReturnCallback(
             fn (): Generator => $this->stream([
-                [new MatchId(1), $this->unresolvedMatch()],
+                [new MatchId(1), $this->mappedMatch()],
                 [new MatchId(2), $requestError],
                 [new MatchId(3), $dataError],
-                [new MatchId(4), $this->unresolvedMatch(self::withoutPositionAndOnLaneOne(...))],
-                [new MatchId(5), $this->unresolvedMatch()],
+                [new MatchId(4), $this->mappedMatch(self::withoutPositionAndNoMiddle(...))],
+                [new MatchId(5), $this->mappedMatch()],
             ])
         );
 
-        $results = iterator_to_array(
-            (new MatchService($source, new ProSceneRoleResolver()))->getMatches([]),
-            false,
-        );
+        $results = iterator_to_array((new MatchService($source))->getMatches([]), false);
 
         $this->assertContainsOnlyInstancesOf(MatchFetchResult::class, $results);
         $this->assertSame([1, 2, 3, 4, 5], array_map(static fn (MatchFetchResult $r) => $r->getMatchId()->getValue(), $results));
@@ -153,8 +116,8 @@ class MatchServiceTest extends TestCase
         $this->assertNull($results[2]->getMatchDetail());
         $this->assertSame($dataError, $results[2]->getError());
 
-        $this->assertNull($results[3]->getMatchDetail());
-        $this->assertInstanceOf(DomainException::class, $results[3]->getError());
+        $this->assertNull($results[3]->getError());
+        $this->assertSame(PlayerRole::UNKNOWN, $this->roles($results[3]->getMatchDetail())[self::NOTHING_TO_SAY]);
 
         $this->assertNull($results[4]->getError());
         $this->assertSame(PlayerRole::OFFLANE, $this->roles($results[4]->getMatchDetail())[self::TIGER]);
@@ -171,10 +134,7 @@ class MatchServiceTest extends TestCase
             ])
         );
 
-        $results = iterator_to_array(
-            (new MatchService($source, new ProSceneRoleResolver()))->getMatches([]),
-            false,
-        );
+        $results = iterator_to_array((new MatchService($source))->getMatches([]), false);
 
         $this->assertSame([30, 10, 20], array_map(static fn (MatchFetchResult $r) => $r->getMatchId()->getValue(), $results));
     }
@@ -188,7 +148,7 @@ class MatchServiceTest extends TestCase
             ->with($ids, 5)
             ->willReturn($this->stream([]));
 
-        $this->assertSame([], iterator_to_array((new MatchService($source, new ProSceneRoleResolver()))->getMatches($ids), false));
+        $this->assertSame([], iterator_to_array((new MatchService($source))->getMatches($ids), false));
     }
 
     public function test_getMatchesPassesExplicitConcurrencyToSource()
@@ -199,7 +159,7 @@ class MatchServiceTest extends TestCase
             ->with([], 2)
             ->willReturn($this->stream([]));
 
-        iterator_to_array((new MatchService($source, new ProSceneRoleResolver()))->getMatches([], 2), false);
+        iterator_to_array((new MatchService($source))->getMatches([], 2), false);
     }
 
     public function test_getMatchesIsLazy()
@@ -207,17 +167,17 @@ class MatchServiceTest extends TestCase
         $source = $this->createMock(MatchSourceInterface::class);
         $source->expects($this->never())->method('getMatches');
 
-        (new MatchService($source, new ProSceneRoleResolver()))->getMatches([new MatchId(1)]);
+        (new MatchService($source))->getMatches([new MatchId(1)]);
     }
 
     /**
-     * Мидер Radiant уходит на сейф, position_est нет: ProSceneRoleResolver такую раскладку не разбирает
+     * Мидер Radiant уходит на сейф, position_est нет ни у кого (нераспарсенный матч без мида)
      */
-    private static function withoutPositionAndOnLaneOne(array $data): array
+    private static function withoutPositionAndNoMiddle(array $data): array
     {
         foreach ($data['players'] as &$player) {
             unset($player['position_est']);
-            if (173978074 === $player['account_id']) {
+            if (self::NOTHING_TO_SAY === $player['account_id']) {
                 $player['lane'] = 1;
                 $player['lane_role'] = 1;
             }
@@ -229,7 +189,7 @@ class MatchServiceTest extends TestCase
     /**
      * @param callable(array): array|null $modify
      */
-    private function unresolvedMatch(?callable $modify = null): MatchDetail
+    private function mappedMatch(?callable $modify = null): MatchDetail
     {
         $data = json_decode(file_get_contents(self::FIXTURE), true);
 

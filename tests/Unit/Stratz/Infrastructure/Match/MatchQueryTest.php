@@ -11,7 +11,7 @@ class MatchQueryTest extends TestCase
 {
     public function test_buildSingleMatch()
     {
-        $built = MatchQuery::build([new MatchId(9026055036)]);
+        $built = MatchQuery::build([new MatchId(9026055036)], true);
 
         $this->assertSame(['m0' => 9026055036], $built['variables']);
         $this->assertStringContainsString('query Matches($m0: Long!)', $built['query']);
@@ -21,7 +21,7 @@ class MatchQueryTest extends TestCase
 
     public function test_buildContainsRequestedFields()
     {
-        $query = MatchQuery::build([new MatchId(1)])['query'];
+        $query = MatchQuery::build([new MatchId(1)], true)['query'];
 
         foreach (['fragment MatchFields on MatchType', 'pickBans', 'playbackData', 'buyBackEvents', 'stunDuration'] as $needle) {
             $this->assertStringContainsString($needle, $query);
@@ -35,7 +35,7 @@ class MatchQueryTest extends TestCase
 
     public function test_buildWithSeveralIdsGivesDistinctAliases()
     {
-        // BATCH_SIZE ограничивает пачку на стороне источника, сам build собирает любое число id;
+        // batchSize() ограничивает пачку на стороне источника, сам build собирает любое число id;
         // дубли получают разные алиасы
         $built = MatchQuery::build([new MatchId(10), new MatchId(20), new MatchId(10)]);
 
@@ -53,8 +53,40 @@ class MatchQueryTest extends TestCase
         $this->assertSame('m12', MatchQuery::alias(12));
     }
 
-    public function test_batchSizeIsPositive()
+    public function test_buildWithoutPlaybackDataByDefault()
     {
-        $this->assertGreaterThanOrEqual(1, MatchQuery::BATCH_SIZE);
+        $this->assertSame(MatchQuery::build([new MatchId(1)]), MatchQuery::build([new MatchId(1)], false));
+        $this->assertStringNotContainsString('playbackData', MatchQuery::build([new MatchId(1)])['query']);
+    }
+
+    public function test_buildWithoutPlaybackDataOmitsPlaybackFields()
+    {
+        $query = MatchQuery::build([new MatchId(1), new MatchId(2)], false)['query'];
+
+        $this->assertStringNotContainsString('playbackData', $query);
+        $this->assertStringNotContainsString('buyBackEvents', $query);
+        // остальные поля фрагмента на месте
+        foreach (['fragment MatchFields on MatchType', 'pickBans', 'stunDuration', 'position', 'farmDistributionReport'] as $needle) {
+            $this->assertStringContainsString($needle, $query);
+        }
+        $this->assertStringContainsString('m1: match(id: $m1) { ...MatchFields }', $query);
+    }
+
+    public function test_fragmentDiffersOnlyByPlaybackFields()
+    {
+        $this->assertStringContainsString(MatchQuery::PLAYBACK_FIELDS, MatchQuery::FIELDS);
+        $this->assertSame(MatchQuery::FIELDS, MatchQuery::fragment(true));
+        $this->assertSame(
+            str_replace(MatchQuery::PLAYBACK_FIELDS, '', MatchQuery::FIELDS),
+            MatchQuery::fragment(false),
+        );
+    }
+
+    public function test_batchSize()
+    {
+        $this->assertSame(1, MatchQuery::BATCH_SIZE_WITH_PLAYBACK);
+        $this->assertSame(5, MatchQuery::BATCH_SIZE);
+        $this->assertSame(MatchQuery::BATCH_SIZE_WITH_PLAYBACK, MatchQuery::batchSize(true));
+        $this->assertSame(MatchQuery::BATCH_SIZE, MatchQuery::batchSize(false));
     }
 }

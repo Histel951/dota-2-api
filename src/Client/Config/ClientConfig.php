@@ -6,6 +6,8 @@ namespace Histel951\Dota2Api\Client\Config;
 /**
  * Настройки HTTP-клиента одного источника.
  * apiKey: для OpenDota уходит в query (api_key), для STRATZ — Bearer-токеном.
+ * rateLimitPerMinute: лимит запросов в минуту (ретраи тоже расходуют лимит), null — без лимитера.
+ * Действует только для STRATZ, OpenDota параметр игнорирует.
  */
 final readonly class ClientConfig
 {
@@ -15,6 +17,7 @@ final readonly class ClientConfig
         private ?int $timeout = null,
         private int $maxRetries = 3,
         private array $options = [],
+        private ?int $rateLimitPerMinute = null,
     )
     {
     }
@@ -42,5 +45,13 @@ final readonly class ClientConfig
     public function getOptions(): array
     {
         return $this->options;
+    }
+
+    /**
+     * Лимит запросов в минуту; null — без лимитера. Учитывается только STRATZ.
+     */
+    public function getRateLimitPerMinute(): ?int
+    {
+        return $this->rateLimitPerMinute;
     }
 }

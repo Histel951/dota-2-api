@@ -1,6 +1,6 @@
 ---
 name: domain-implementer
-description: "Реализует доменный код источников и маппинг данных источника в домен: сущности, value objects, enums, доменные исключения в <Source>/<Context>/Domain (OpenDota, Stratz) и SharedKernel, доменные сервисы (OpenDota/Match/Domain/Role: ProSceneRoleResolver, PrefilledRoleResolver), мапперы <Source>/Infrastructure/<Context>/*Mapper (OpenDota: MatchMapper, PlayerMapper, DraftMapper, LaneNormalizer, Team*Mapper, MatchExtractor; STRATZ: MatchMapper, PlayerMapper, DraftMapper, LaneMapper, Team*Mapper) и поля GraphQL-запросов STRATZ под них. Используй для новых показателей игрока/матча, новых сущностей и любой реализации, которая не относится к портам/Application/адаптерам источников/транспорту/DI (api-designer) и тестам (test-writer)."
+description: "Реализует доменный код источников и маппинг данных источника в домен: сущности, value objects, enums, доменные исключения в <Source>/<Context>/Domain (OpenDota, Stratz) и SharedKernel, мапперы <Source>/Infrastructure/<Context>/*Mapper (OpenDota: MatchMapper, PlayerMapper, DraftMapper, LaneNormalizer, Team*Mapper, MatchExtractor; STRATZ: MatchMapper, PlayerMapper, DraftMapper, LaneMapper, Team*Mapper) и поля GraphQL-запросов STRATZ под них. Используй для новых показателей игрока/матча, новых сущностей и любой реализации, которая не относится к портам/Application/адаптерам источников/транспорту/DI (api-designer) и тестам (test-writer)."
 tools:
   - Read
   - Edit
@@ -38,11 +38,10 @@ model: sonnet
 
 ## Твоя зона
 
-- `<Source>/<Context>/Domain/*` (`OpenDota/Match/Domain/{Player,Player/Stats,Side,Role}`,
+- `<Source>/<Context>/Domain/*` (`OpenDota/Match/Domain/{Player,Player/Stats,Side}`,
   `OpenDota/Team/Domain/{History,Roster,Heroes}`, `Stratz/Match/Domain/{Player,Player/Stats}`,
   `Stratz/Team/Domain/{History,Roster,Heroes}`, исключения в `<Source>/<Context>/Domain/Exception`) и
   `SharedKernel/*` — только то, что одинаково по смыслу у обоих источников.
-- `OpenDota/Match/Domain/Role/*` (`RoleResolverInterface`, `PrefilledRoleResolver`, `ProSceneRoleResolver`).
 - `<Source>/Infrastructure/<Context>/*Mapper` (корневые наследуют `Infrastructure/Mapping/AbstractMapper`;
   вспомогательные `PlayerMapper`, `DraftMapper`, `LaneNormalizer`, `LaneMapper` — `final`, без
   наследования), `OpenDota/Infrastructure/Match/MatchExtractor` и список полей
@@ -66,12 +65,10 @@ model: sonnet
   `Invalid*Exception`, наследующий `SharedKernel\Exception\DomainException`, с текстом
   на английском. Новый счётчик статистики — пустой
   `final readonly class X extends Counter {}` (`SharedKernel\Counter`) в `<Source>/Match/Domain/Player/Stats/`.
-- Сущности неизменяемы. OpenDota: добавил группу/поле в `MatchPlayerPerformance` — обнови
-  `withRole()`: он пересоздаёт объект со всеми полями.
+- Сущности неизменяемы (`final readonly`, без мутаторов).
 - OpenDota: новый ключ ответа матча добавь в `MatchExtractor::PLAYER_FIELDS` (или нужный список
   экстрактора), иначе он не дойдёт до маппера. Поле игрока заполняется в `PlayerMapper::map()`.
-  Маппер роли не резолвит: начальная роль — из `position_est` или UNKNOWN, резолв — в
-  `MatchService` через `MatchDetail::withResolvedRoles()`.
+  Роль — только из `position_est` (1–5 → `PlayerRole`), иначе `UNKNOWN`; эвристик нет.
 - STRATZ: новое поле — в `MatchQuery::FIELDS`; в `PlayerMapper` все вложенные чтения через `??`
   (иначе warning → phpunit падает), константы формул (`SMOKE_ITEM_ID`, `STUN_UNITS_PER_SECOND`, …);
   линия хранится относительной (`LaneMapper`), позиция — как есть (`Position`), без эвристик.
@@ -93,9 +90,9 @@ model: sonnet
 ## Чего не делаешь
 
 - Не пишешь и не правишь тесты (`test-writer`). Если сломал сигнатуру, которую использует
-  тестовый хелпер (например, `createPlayer()` в `ProSceneRoleResolverTest` или
+  тестовый хелпер (например, `createPlayer()` в OpenDota
   `MatchDetailTest`, `createRaw()` в STRATZ `PlayerMapperTest`), — укажи это в отчёте.
-- Не меняешь алгоритм определения ролей OpenDota, если это не задача среза.
+- Не возвращаешь эвристику ролей OpenDota: роль — только `position_est` (область бандла — про-сцена).
 - Не коммитишь и не трогаешь git-состояние.
 
 ## Перед возвратом

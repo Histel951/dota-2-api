@@ -27,21 +27,6 @@ final readonly class MatchPlayerPerformance
     {
     }
 
-    public function withRole(Role $role): self
-    {
-        return new self(
-            identity: $this->identity,
-            kda: $this->kda,
-            role: $role,
-            objectives: $this->objectives,
-            creeps: $this->creeps,
-            economy: $this->economy,
-            warding: $this->warding,
-            damage: $this->damage,
-            utility: $this->utility,
-        );
-    }
-
     public function getKda(): KDA
     {
         return $this->kda;

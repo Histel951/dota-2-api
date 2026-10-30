@@ -6,13 +6,11 @@ namespace Histel951\Dota2Api\Stratz\Infrastructure\Match;
 use Generator;
 use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Exception\SourceRequestException;
+use Histel951\Dota2Api\Infrastructure\Http\ConcurrentRequests;
 use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Stratz\Infrastructure\GraphQlGateway;
 use Histel951\Dota2Api\Stratz\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\Stratz\Match\Port\MatchSourceInterface;
-use SplObjectStorage;
-use SplQueue;
-use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
@@ -31,9 +29,9 @@ final class StratzMatchSource implements MatchSourceInterface
      * @throws SourceRequestException
      * @throws SourceDataException
      */
-    public function getMatch(MatchId $id): MatchDetail
+    public function getMatch(MatchId $id, bool $withPlaybackData = false): MatchDetail
     {
-        ['query' => $query, 'variables' => $variables] = MatchQuery::build([$id]);
+        ['query' => $query, 'variables' => $variables] = MatchQuery::build([$id], $withPlaybackData);
 
         return $this->mapper->toEntity($this->gateway->query($query, $variables)->field(MatchQuery::alias(0)));
     }
@@ -43,63 +41,31 @@ final class StratzMatchSource implements MatchSourceInterface
      * @param positive-int $concurrency
      * @return Generator<MatchId, MatchDetail|SourceRequestException|SourceDataException, mixed, void>
      */
-    public function getMatches(array $ids, int $concurrency): Generator
+    public function getMatches(array $ids, int $concurrency, bool $withPlaybackData = false): Generator
     {
-        /** @var SplQueue<non-empty-list<MatchId>> $queue */
-        $queue = new SplQueue();
-        foreach (array_chunk($ids, MatchQuery::BATCH_SIZE) as $chunk) {
-            $queue->enqueue($chunk);
-        }
+        $responses = ConcurrentRequests::fetch(
+            array_chunk($ids, MatchQuery::batchSize($withPlaybackData)),
+            $concurrency,
+            function (array $batch) use ($withPlaybackData): ResponseInterface {
+                ['query' => $query, 'variables' => $variables] = MatchQuery::build($batch, $withPlaybackData);
 
-        /** @var SplObjectStorage<ResponseInterface, non-empty-list<MatchId>> $chunks */
-        $chunks = new SplObjectStorage();
-        /** @var array<int, ResponseInterface> $pending */
-        $pending = [];
+                return $this->gateway->request($query, $variables);
+            },
+            $this->gateway->stream(...),
+        );
 
-        while (!$queue->isEmpty() || $pending !== []) {
-            foreach ($this->fillWindow($queue, $chunks, $pending, $concurrency) as $failedId => $failure) {
-                yield $failedId => $failure;
-            }
-
-            if ($pending === []) {
+        /** @var non-empty-list<MatchId> $batch */
+        foreach ($responses as $batch => $response) {
+            if ($response instanceof SourceRequestException) {
+                // один экземпляр на всю пачку
+                foreach ($batch as $id) {
+                    yield $id => $response;
+                }
                 continue;
             }
 
-            foreach ($this->gateway->stream($pending) as $response => $chunk) {
-                if (!isset($chunks[$response])) {
-                    continue;
-                }
-
-                try {
-                    if ($chunk->isFirst()) {
-                        // заголовки уже получены, вызов не блокирует; без явной проверки статуса
-                        // RetryableHttpClient бросает ClientException/ServerException из самого потока
-                        $response->getStatusCode();
-                    }
-
-                    if (!$chunk->isLast()) {
-                        continue;
-                    }
-                } catch (ExceptionInterface $e) {
-                    $ids = $chunks[$response];
-                    unset($pending[spl_object_id($response)], $chunks[$response]);
-
-                    foreach ($ids as $id) {
-                        yield $id => new SourceRequestException($e->getMessage(), 0, $e);
-                    }
-                    continue;
-                }
-
-                $ids = $chunks[$response];
-                unset($pending[spl_object_id($response)], $chunks[$response]);
-
-                foreach ($this->resolveChunk($response, $ids) as $id => $outcome) {
-                    yield $id => $outcome;
-                }
-
-                foreach ($this->fillWindow($queue, $chunks, $pending, $concurrency) as $failedId => $failure) {
-                    yield $failedId => $failure;
-                }
+            foreach ($this->resolveChunk($response, $batch) as $id => $outcome) {
+                yield $id => $outcome;
             }
         }
     }
@@ -128,39 +94,6 @@ final class StratzMatchSource implements MatchSourceInterface
             } catch (SourceRequestException|SourceDataException $e) {
                 yield $id => $e;
             }
-        }
-    }
-
-    /**
-     * Запускает запросы, пока окно не заполнено. Отвергнутые клиентом сразу отдаёт значением на каждый id пачки.
-     *
-     * @param SplQueue<non-empty-list<MatchId>> $queue
-     * @param SplObjectStorage<ResponseInterface, non-empty-list<MatchId>> $chunks
-     * @param array<int, ResponseInterface> $pending
-     * @return Generator<MatchId, SourceRequestException, mixed, void>
-     */
-    private function fillWindow(
-        SplQueue $queue,
-        SplObjectStorage $chunks,
-        array &$pending,
-        int $concurrency,
-    ): Generator
-    {
-        while (count($pending) < $concurrency && !$queue->isEmpty()) {
-            $ids = $queue->dequeue();
-            ['query' => $query, 'variables' => $variables] = MatchQuery::build($ids);
-
-            try {
-                $response = $this->gateway->request($query, $variables);
-            } catch (SourceRequestException $e) {
-                foreach ($ids as $id) {
-                    yield $id => $e;
-                }
-                continue;
-            }
-
-            $pending[spl_object_id($response)] = $response;
-            $chunks[$response] = $ids;
         }
     }
 }
