@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1);
+declare(strict_types = 1);
 
 use Histel951\Dota2Api\Client\Dota2ApiClient;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
