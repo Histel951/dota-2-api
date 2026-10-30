@@ -1,0 +1,381 @@
+{
+    "data": {
+        "m0": {
+            "id": 8794744726,
+            "didRadiantWin": false,
+            "durationSeconds": 2776,
+            "startDateTime": 1777714862,
+            "parsedDateTime": null,
+            "regionId": 13,
+            "radiantTeamId": 8261500,
+            "direTeamId": 5017210,
+            "radiantTeam": {
+                "name": "Xtreme Gaming"
+            },
+            "direTeam": {
+                "name": "EHOME.immortal"
+            },
+            "pickBans": null,
+            "players": [
+                {
+                    "steamAccountId": 898754153,
+                    "isRadiant": true,
+                    "heroId": 41,
+                    "kills": 2,
+                    "deaths": 5,
+                    "assists": 9,
+                    "numLastHits": 580,
+                    "numDenies": 24,
+                    "goldPerMinute": 693,
+                    "experiencePerMinute": 1017,
+                    "networth": 29434,
+                    "goldSpent": 30470,
+                    "heroDamage": 30261,
+                    "towerDamage": 2405,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "NothingToGay",
+                        "proSteamAccount": {
+                            "name": "Ame"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 94296097,
+                    "isRadiant": true,
+                    "heroId": 87,
+                    "kills": 2,
+                    "deaths": 9,
+                    "assists": 10,
+                    "numLastHits": 34,
+                    "numDenies": 0,
+                    "goldPerMinute": 280,
+                    "experiencePerMinute": 438,
+                    "networth": 8208,
+                    "goldSpent": 13715,
+                    "heroDamage": 14547,
+                    "towerDamage": 0,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "lavie",
+                        "proSteamAccount": {
+                            "name": "xNova"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 173978074,
+                    "isRadiant": true,
+                    "heroId": 120,
+                    "kills": 7,
+                    "deaths": 5,
+                    "assists": 7,
+                    "numLastHits": 458,
+                    "numDenies": 14,
+                    "goldPerMinute": 599,
+                    "experiencePerMinute": 834,
+                    "networth": 22492,
+                    "goldSpent": 22450,
+                    "heroDamage": 26178,
+                    "towerDamage": 72,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "NothingToSay",
+                        "proSteamAccount": {
+                            "name": "NothingToSay"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 101695162,
+                    "isRadiant": true,
+                    "heroId": 138,
+                    "kills": 3,
+                    "deaths": 12,
+                    "assists": 6,
+                    "numLastHits": 97,
+                    "numDenies": 7,
+                    "goldPerMinute": 277,
+                    "experiencePerMinute": 483,
+                    "networth": 12703,
+                    "goldSpent": 11485,
+                    "heroDamage": 18753,
+                    "towerDamage": 317,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "fy",
+                        "proSteamAccount": {
+                            "name": "fy"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 98887913,
+                    "isRadiant": true,
+                    "heroId": 36,
+                    "kills": 4,
+                    "deaths": 9,
+                    "assists": 4,
+                    "numLastHits": 357,
+                    "numDenies": 13,
+                    "goldPerMinute": 479,
+                    "experiencePerMinute": 530,
+                    "networth": 17986,
+                    "goldSpent": 17855,
+                    "heroDamage": 27956,
+                    "towerDamage": 303,
+                    "heroHealing": 3095,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "TIGER",
+                        "proSteamAccount": null
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 170896543,
+                    "isRadiant": false,
+                    "heroId": 145,
+                    "kills": 11,
+                    "deaths": 3,
+                    "assists": 8,
+                    "numLastHits": 485,
+                    "numDenies": 14,
+                    "goldPerMinute": 743,
+                    "experiencePerMinute": 983,
+                    "networth": 31903,
+                    "goldSpent": 28680,
+                    "heroDamage": 32334,
+                    "towerDamage": 23255,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "Try it now",
+                        "proSteamAccount": {
+                            "name": "\tYSR-04E"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 249835593,
+                    "isRadiant": false,
+                    "heroId": 112,
+                    "kills": 3,
+                    "deaths": 8,
+                    "assists": 21,
+                    "numLastHits": 37,
+                    "numDenies": 2,
+                    "goldPerMinute": 369,
+                    "experiencePerMinute": 455,
+                    "networth": 11870,
+                    "goldSpent": 12785,
+                    "heroDamage": 15505,
+                    "towerDamage": 0,
+                    "heroHealing": 11949,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "Gao[o]ne-",
+                        "proSteamAccount": {
+                            "name": "zzq"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 315272623,
+                    "isRadiant": false,
+                    "heroId": 16,
+                    "kills": 5,
+                    "deaths": 1,
+                    "assists": 22,
+                    "numLastHits": 350,
+                    "numDenies": 0,
+                    "goldPerMinute": 596,
+                    "experiencePerMinute": 865,
+                    "networth": 23990,
+                    "goldSpent": 24290,
+                    "heroDamage": 31085,
+                    "towerDamage": 325,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "Nikaido^HirO",
+                        "proSteamAccount": {
+                            "name": "Blood"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 150961567,
+                    "isRadiant": false,
+                    "heroId": 51,
+                    "kills": 2,
+                    "deaths": 4,
+                    "assists": 25,
+                    "numLastHits": 45,
+                    "numDenies": 4,
+                    "goldPerMinute": 327,
+                    "experiencePerMinute": 457,
+                    "networth": 15438,
+                    "goldSpent": 14875,
+                    "heroDamage": 16945,
+                    "towerDamage": 159,
+                    "heroHealing": 20,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "镜",
+                        "proSteamAccount": {
+                            "name": "plAnet"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                },
+                {
+                    "steamAccountId": 145957968,
+                    "isRadiant": false,
+                    "heroId": 65,
+                    "kills": 17,
+                    "deaths": 2,
+                    "assists": 18,
+                    "numLastHits": 340,
+                    "numDenies": 6,
+                    "goldPerMinute": 626,
+                    "experiencePerMinute": 915,
+                    "networth": 26925,
+                    "goldSpent": 24305,
+                    "heroDamage": 32660,
+                    "towerDamage": 2207,
+                    "heroHealing": 0,
+                    "lane": null,
+                    "position": null,
+                    "steamAccount": {
+                        "name": "wa",
+                        "proSteamAccount": {
+                            "name": "b a b"
+                        }
+                    },
+                    "stats": {
+                        "campStack": null,
+                        "wards": null,
+                        "wardDestruction": null,
+                        "runes": null,
+                        "courierKills": null,
+                        "itemUsed": null,
+                        "farmDistributionReport": null,
+                        "heroDamageReport": null
+                    },
+                    "playbackData": null
+                }
+            ]
+        }
+    }
+}
