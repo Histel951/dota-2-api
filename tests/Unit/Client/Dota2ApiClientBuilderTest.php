@@ -3,14 +3,12 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Unit\Client;
 
-use Histel951\Dota2Api\Client\Config\ApiSource;
 use Histel951\Dota2Api\Client\Config\ClientConfig;
 use Histel951\Dota2Api\Client\Dota2ApiClientBuilder;
-use Histel951\Dota2Api\Exception\ClientConfigurationException;
 use Histel951\Dota2Api\Exception\SourceRequestException;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Team\OpenDotaTeamSource;
-use Histel951\Dota2Api\Match\Application\MatchService;
-use Histel951\Dota2Api\Match\Domain\Player\PlayerRole;
+use Histel951\Dota2Api\OpenDota\Infrastructure\Team\OpenDotaTeamSource;
+use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
+use Histel951\Dota2Api\OpenDota\Match\Domain\Player\PlayerRole;
 use Histel951\Dota2Api\SharedKernel\MatchId;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -30,8 +28,8 @@ class Dota2ApiClientBuilderTest extends TestCase
     {
         $client = $this->builder([new MockResponse('{}')])->build();
 
-        $this->assertInstanceOf(MatchService::class, $client->matches());
-        $this->assertInstanceOf(OpenDotaTeamSource::class, $client->teams());
+        $this->assertInstanceOf(MatchService::class, $client->openDota()->matches());
+        $this->assertInstanceOf(OpenDotaTeamSource::class, $client->openDota()->teams());
     }
 
     public function test_defaultMatchRolesComeFromPositionEst()
@@ -49,7 +47,7 @@ class Dota2ApiClientBuilderTest extends TestCase
 
         $client = $this->builder([new MockResponse(json_encode($data))])->build();
 
-        $result = $client->matches()->getMatch(new MatchId(8794744726));
+        $result = $client->openDota()->matches()->getMatch(new MatchId(8794744726));
 
         $this->assertNull($result->getError());
         $roles = [];
@@ -71,7 +69,7 @@ class Dota2ApiClientBuilderTest extends TestCase
 
         $client = $this->builder([new MockResponse(json_encode($data))])->build();
 
-        $result = $client->matches()->getMatch(new MatchId(8794744726));
+        $result = $client->openDota()->matches()->getMatch(new MatchId(8794744726));
 
         $this->assertNull($result->getError());
         $roles = [];
@@ -89,7 +87,7 @@ class Dota2ApiClientBuilderTest extends TestCase
             new MockResponse('{}', ['http_code' => 404]),
         ])->build();
 
-        $results = iterator_to_array($client->matches()->getMatches([new MatchId(1), new MatchId(2)]), false);
+        $results = iterator_to_array($client->openDota()->matches()->getMatches([new MatchId(1), new MatchId(2)]), false);
 
         $this->assertCount(2, $results);
         $errors = array_filter($results, static fn ($r) => null !== $r->getError());
@@ -103,19 +101,7 @@ class Dota2ApiClientBuilderTest extends TestCase
 
         $this->expectException(SourceRequestException::class);
 
-        $client->matches()->getMatch(new MatchId(1));
-    }
-
-    public function test_buildRejectsStratzSource()
-    {
-        $builder = new Dota2ApiClientBuilder(
-            new ClientConfig(baseUrl: 'https://api.stratz.com/', apiSource: ApiSource::STRATZ),
-            new MockHttpClient(),
-        );
-
-        $this->expectException(ClientConfigurationException::class);
-
-        $builder->build();
+        $client->openDota()->matches()->getMatch(new MatchId(1));
     }
 
     /**
@@ -130,12 +116,8 @@ class Dota2ApiClientBuilderTest extends TestCase
         });
 
         return new Dota2ApiClientBuilder(
-            new ClientConfig(
-                baseUrl: 'https://api.opendota.com/api/',
-                apiSource: ApiSource::OPENDOTA,
-                maxRetries: 0,
-            ),
             $http,
+            new ClientConfig(baseUrl: 'https://api.opendota.com/api/', maxRetries: 0),
         );
     }
 }

@@ -1,5 +1,4 @@
 dota2_api:
-  source: opendota          # opendota | stratz (stratz пока не реализован)
   timeout: 60
   max_retries: 3            # повторы для 429/5xx и транспортных ошибок
   opendota:
