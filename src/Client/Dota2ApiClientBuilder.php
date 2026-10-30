@@ -8,8 +8,6 @@ use Histel951\Dota2Api\OpenDota\Infrastructure\ApiGateway;
 use Histel951\Dota2Api\OpenDota\Infrastructure\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\OpenDota\Infrastructure\OpenDotaSourceFactory;
 use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\PrefilledRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
 use Histel951\Dota2Api\OpenDota\OpenDotaClient;
 use Histel951\Dota2Api\Stratz\Infrastructure\GraphQlGateway;
 use Histel951\Dota2Api\Stratz\Infrastructure\StratzHttpClientFactory;
@@ -51,10 +49,7 @@ final readonly class Dota2ApiClientBuilder
         );
 
         return new OpenDotaClient(
-            matches: new MatchService(
-                source: $factory->createMatchSource(),
-                roleResolver: new PrefilledRoleResolver(inner: new ProSceneRoleResolver()),
-            ),
+            matches: new MatchService(source: $factory->createMatchSource()),
             teams: $factory->createTeamSource(),
         );
     }

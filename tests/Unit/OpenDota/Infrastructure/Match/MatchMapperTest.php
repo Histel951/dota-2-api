@@ -10,7 +10,6 @@ use Histel951\Dota2Api\OpenDota\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\Lane;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\MatchPlayerPerformance;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\PlayerRole;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
 use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\SharedKernel\Side;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -68,7 +67,7 @@ class MatchMapperTest extends TestCase
         int $sentryPlaced,
     )
     {
-        $match = $this->mapFixture()->withResolvedRoles(new ProSceneRoleResolver());
+        $match = $this->mapFixture();
         $player = $this->findPlayer($match, $accountId);
 
         $this->assertSame($side, $player->getIdentity()->getSide());
@@ -168,10 +167,9 @@ class MatchMapperTest extends TestCase
         }
     }
 
-    public function test_toEntityDoesNotResolveRoles()
+    public function test_toEntityMapsMatchWithoutPositionEstWithUnknownRoles()
     {
-        // раскладка линий, на которой падает резолвер: маппер роли не резолвит и матч отдаёт,
-        // ошибку даёт withResolvedRoles
+        // все на одной линии и без position_est: матч маппится, роли UNKNOWN
         $match = $this->mapFixture(static function (array $data): array {
             foreach ($data['players'] as &$player) {
                 $player['lane'] = 1;
@@ -182,9 +180,9 @@ class MatchMapperTest extends TestCase
         });
 
         $this->assertCount(10, $match->getPlayers()->getValue());
-
-        $this->expectException(DomainException::class);
-        $match->withResolvedRoles(new ProSceneRoleResolver());
+        foreach ($match->getPlayers()->getValue() as $player) {
+            $this->assertSame(PlayerRole::UNKNOWN, $player->getRole()->getValue());
+        }
     }
 
     public function test_toEntityWrapsUnexpectedFieldTypeIntoSourceDataException()

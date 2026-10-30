@@ -10,9 +10,6 @@ use Histel951\Dota2Api\OpenDota\Infrastructure\ApiGatewayInterface;
 use Histel951\Dota2Api\OpenDota\Infrastructure\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\OpenDota\Infrastructure\OpenDotaSourceFactory;
 use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\PrefilledRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\OpenDota\Match\Port\MatchSourceInterface;
 use Histel951\Dota2Api\OpenDota\OpenDotaClient;
 use Histel951\Dota2Api\OpenDota\Team\Port\TeamSourceInterface;
@@ -54,10 +51,6 @@ return static function (ContainerConfigurator $configurator): void {
     $services->alias(ApiGatewayInterface::class, ApiGateway::class);
 
     $services->set(OpenDotaSourceFactory::class);
-
-    // сначала роли из position_est, при неполном наборе — делегирование эвристике ProSceneRoleResolver
-    $services->set(RoleResolverInterface::class, PrefilledRoleResolver::class)
-        ->arg('$inner', inline_service(ProSceneRoleResolver::class));
 
     $services->set(MatchSourceInterface::class)
         ->factory([service(OpenDotaSourceFactory::class), 'createMatchSource']);

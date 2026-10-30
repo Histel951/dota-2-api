@@ -28,21 +28,6 @@ final readonly class TeamSide
         private Side         $side,
     ) {}
 
-    /**
-     * Копия стороны с другим составом игроков (например, с проставленными ролями).
-     */
-    public function withPlayers(MatchPlayers $players): self
-    {
-        return new self(
-            teamId: $this->teamId,
-            teamName: $this->teamName,
-            won: $this->won,
-            draft: $this->draft,
-            players: $players,
-            side: $this->side,
-        );
-    }
-
     public function getTeamId(): TeamId
     {
         return $this->teamId;

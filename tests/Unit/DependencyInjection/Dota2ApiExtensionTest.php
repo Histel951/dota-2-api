@@ -17,9 +17,6 @@ use Histel951\Dota2Api\DependencyInjection\Dota2ApiExtension;
 use Histel951\Dota2Api\OpenDota\Infrastructure\Match\OpenDotaMatchSource;
 use Histel951\Dota2Api\OpenDota\Infrastructure\Team\OpenDotaTeamSource;
 use Histel951\Dota2Api\OpenDota\Match\Application\MatchService;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\PrefilledRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\OpenDota\Match\Port\MatchSourceInterface;
 use Histel951\Dota2Api\OpenDota\Team\Port\TeamSourceInterface;
 use PHPUnit\Framework\TestCase;
@@ -100,30 +97,6 @@ class Dota2ApiExtensionTest extends TestCase
         $container = $this->createContainer([[]]);
 
         $this->assertTrue($container->getDefinition(Dota2ApiClient::class)->isPublic());
-    }
-
-    public function test_matchServiceReceivesPrefilledRoleResolver()
-    {
-        $container = $this->createContainer([[]]);
-        $container->getDefinition(MatchService::class)->setPublic(true);
-        $container->compile();
-
-        $resolver = (new \ReflectionProperty(MatchService::class, 'roleResolver'))
-            ->getValue($container->get(MatchService::class));
-
-        $this->assertInstanceOf(PrefilledRoleResolver::class, $resolver);
-    }
-
-    public function test_roleResolverIsPrefilledDecoratorOverHeuristic()
-    {
-        $container = $this->createContainer([[]]);
-
-        $definition = $container->getDefinition(RoleResolverInterface::class);
-        $inner = $definition->getArgument('$inner');
-
-        $this->assertSame(PrefilledRoleResolver::class, $definition->getClass());
-        $this->assertInstanceOf(Definition::class, $inner);
-        $this->assertSame(ProSceneRoleResolver::class, $inner->getClass());
     }
 
     public function test_stratzParametersHaveDefaults()

@@ -46,7 +46,7 @@ class OpenDotaMatchSourceTest extends TestCase
 
     public function test_getMatchDoesNotResolveRoles()
     {
-        // роли приходят из position_est; без него остаются UNKNOWN — резолв в MatchService
+        // роли приходят из position_est; без него остаются UNKNOWN
         $source = $this->createSource(function () {
             $data = $this->data(self::FIXTURE_ID);
             foreach ($data['players'] as &$player) {

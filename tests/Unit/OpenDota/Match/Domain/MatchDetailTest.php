@@ -44,7 +44,6 @@ use Histel951\Dota2Api\OpenDota\Match\Domain\Player\Stats\TowerKills;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\Stats\UtilityStats;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\Stats\WardingStats;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\Stats\Watchers;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\RoleResolverInterface;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Side\MatchResult;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Side\TeamSide;
 use Histel951\Dota2Api\SharedKernel\Draft\Draft;
@@ -102,84 +101,6 @@ class MatchDetailTest extends TestCase
 
         $this->assertSame($radiant, $result->getWinner());
         $this->assertSame($dire, $result->getLoser());
-    }
-
-    public function test_withResolvedRolesCallsResolverPerSideAndRebuildsDetail(): void
-    {
-        $radiant = $this->createSide(Side::RADIANT, false, [$this->createPlayer(1, Side::RADIANT)]);
-        $dire = $this->createSide(Side::DIRE, true, [$this->createPlayer(2, Side::DIRE)]);
-        $detail = $this->createDetail($radiant, $dire, Duration::fromSeconds(1800));
-
-        $resolver = new class implements RoleResolverInterface {
-            /** @var list<bool> */
-            public array $calls = [];
-
-            public function resolve(array $players, bool $isRadiant = true): array
-            {
-                $this->calls[] = $isRadiant;
-                $role = new Role($isRadiant ? PlayerRole::CARRY : PlayerRole::SUPPORT);
-
-                return array_map(static fn(MatchPlayerPerformance $p) => $p->withRole($role), $players);
-            }
-        };
-
-        $resolved = $detail->withResolvedRoles($resolver);
-
-        $this->assertSame([true, false], $resolver->calls);
-        $this->assertNotSame($detail, $resolved);
-        $this->assertSame(
-            PlayerRole::CARRY,
-            $resolved->getRadiant()->getPlayers()->getValue()[0]->getRole()->getValue(),
-        );
-        $this->assertSame(
-            PlayerRole::SUPPORT,
-            $resolved->getDire()->getPlayers()->getValue()[0]->getRole()->getValue(),
-        );
-        $this->assertSame(
-            [PlayerRole::CARRY, PlayerRole::SUPPORT],
-            array_map(
-                static fn(MatchPlayerPerformance $p) => $p->getRole()->getValue(),
-                $resolved->getPlayers()->getValue(),
-            ),
-        );
-        // Исходный матч не меняется
-        $this->assertSame(
-            PlayerRole::UNKNOWN,
-            $detail->getRadiant()->getPlayers()->getValue()[0]->getRole()->getValue(),
-        );
-
-        // Остальное сохраняется
-        $this->assertSame($detail->getId(), $resolved->getId());
-        $this->assertSame($detail->getDuration(), $resolved->getDuration());
-        $this->assertSame($detail->getDraft(), $resolved->getDraft());
-        $this->assertSame($detail->getStartTime(), $resolved->getStartTime());
-        $this->assertSame($detail->getRegion(), $resolved->getRegion());
-        $this->assertSame($radiant->getDraft(), $resolved->getRadiant()->getDraft());
-        $this->assertSame($dire->getTeamName(), $resolved->getDire()->getTeamName());
-        $this->assertSame($dire->getSide(), $resolved->getDire()->getSide());
-        $this->assertFalse($resolved->getRadiant()->isWon());
-        $this->assertTrue($resolved->getDire()->isWon());
-        $this->assertSame($resolved->getDire(), $resolved->getResult()->getWinner());
-    }
-
-    public function test_withResolvedRolesPropagatesResolverException(): void
-    {
-        $detail = $this->createDetail(
-            $this->createSide(Side::RADIANT, true, [$this->createPlayer(1, Side::RADIANT)]),
-            $this->createSide(Side::DIRE, false, [$this->createPlayer(2, Side::DIRE)]),
-        );
-
-        $resolver = new class implements RoleResolverInterface {
-            public function resolve(array $players, bool $isRadiant = true): array
-            {
-                throw new DomainException('resolver failed');
-            }
-        };
-
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('resolver failed');
-
-        $detail->withResolvedRoles($resolver);
     }
 
     private function createDetail(TeamSide $radiant, TeamSide $dire, ?Duration $duration = null): MatchDetail

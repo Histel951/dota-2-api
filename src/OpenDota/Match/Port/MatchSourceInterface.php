@@ -10,8 +10,7 @@ use Histel951\Dota2Api\OpenDota\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\SharedKernel\MatchId;
 
 /**
- * Порт источника матчей. Роли игроков не резолвит: отдаёт то, что есть у источника
- * (position_est или UNKNOWN), резолв ролей — в Application.
+ * Порт источника матчей. Роли игроков — из position_est источника, без него UNKNOWN.
  */
 interface MatchSourceInterface
 {

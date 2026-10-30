@@ -99,7 +99,7 @@ final class PlayerMapper
                 deaths: $player['deaths'],
                 assists: $player['assists']
             ),
-            role: new Role($this->resolveInitialRole($player)),
+            role: new Role($this->resolveRole($player)),
             objectives: new ObjectivesStats(
                 roshanKills: new RoshanKills($player['roshan_kills']),
                 towerKills: new TowerKills($player['tower_kills']),
@@ -146,14 +146,14 @@ final class PlayerMapper
     }
 
     /**
-     * Начальная роль игрока из position_est OpenDota.
+     * Роль игрока из position_est OpenDota.
      *
      * Значения position_est 1-5 совпадают с PlayerRole (carry, mid, offlane, support, hard support).
      * Всё остальное (null, не int, 0, 6 и выше) — UNKNOWN.
      *
      * @param array $player Данные игрока от OpenDota
      */
-    private function resolveInitialRole(array $player): PlayerRole
+    private function resolveRole(array $player): PlayerRole
     {
         $position = $player['position_est'] ?? null;
 

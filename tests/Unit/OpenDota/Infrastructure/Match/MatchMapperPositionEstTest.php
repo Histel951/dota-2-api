@@ -7,14 +7,11 @@ use Histel951\Dota2Api\OpenDota\Infrastructure\Match\MatchExtractor;
 use Histel951\Dota2Api\OpenDota\Infrastructure\Match\MatchMapper;
 use Histel951\Dota2Api\OpenDota\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\OpenDota\Match\Domain\Player\PlayerRole;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\PrefilledRoleResolver;
-use Histel951\Dota2Api\OpenDota\Match\Domain\Role\ProSceneRoleResolver;
-use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Роль игрока из position_est OpenDota, запасной вариант — эвристика ProSceneRoleResolver
+ * Роль игрока OpenDota — его position_est (1-5), иначе UNKNOWN; соседи по стороне не затрагиваются
  */
 class MatchMapperPositionEstTest extends TestCase
 {
@@ -31,8 +28,8 @@ class MatchMapperPositionEstTest extends TestCase
     private const int PLANET = 150961567; // dire, pos4
     private const int NIU = 145957968; // dire, pos3
 
-    /** роли эвристики на фикстуре (совпадают с MatchMapperTest::playersProvider) */
-    private const array HEURISTIC_RADIANT = [
+    /** роли по position_est фикстуры (совпадают с MatchMapperTest::playersProvider) */
+    private const array POSITION_RADIANT = [
         self::AME => PlayerRole::CARRY,
         self::XNOVA => PlayerRole::HARD_SUPPORT,
         self::NOTHING_TO_SAY => PlayerRole::MIDDLE,
@@ -49,25 +46,22 @@ class MatchMapperPositionEstTest extends TestCase
     ];
 
     private MatchMapper $mapper;
-    private PrefilledRoleResolver $resolver;
 
     public function setUp(): void
     {
         $this->mapper = new MatchMapper();
-        $this->resolver = new PrefilledRoleResolver(new ProSceneRoleResolver());
     }
 
     public function test_fixtureRolesFollowPositionEst()
     {
         $match = $this->mapFixture();
 
-        $this->assertEquals(self::HEURISTIC_RADIANT + self::POSITION_DIRE, $this->roles($match));
+        $this->assertEquals(self::POSITION_RADIANT + self::POSITION_DIRE, $this->roles($match));
     }
 
-    public function test_swappedPositionEstWinsOverHeuristic()
+    public function test_swappedPositionEstIsTakenAsIs()
     {
         $match = $this->mapFixture(static function (array $data): array {
-            // эвристика даёт TIGER = OFFLANE, fy = SUPPORT; OpenDota считает наоборот
             $data = self::setPosition($data, self::TIGER, 4);
 
             return self::setPosition($data, self::FY, 3);
@@ -84,29 +78,15 @@ class MatchMapperPositionEstTest extends TestCase
     }
 
     #[DataProvider('missingPositionProvider')]
-    public function test_missingPositionOnOnePlayerResolvesWholeSideByHeuristic(bool $removeKey)
+    public function test_missingPositionGivesUnknownOnlyToThatPlayer(bool $removeKey)
     {
-        $match = $this->mapFixture(static function (array $data) use ($removeKey): array {
-            $data = self::setPosition($data, self::TIGER, $removeKey ? false : null);
+        $match = $this->mapFixture(
+            static fn (array $data): array => self::setPosition($data, self::TIGER, $removeKey ? false : null),
+        );
 
-            // Dire переставлена: её роли должны остаться по position_est
-            $data = self::setPosition($data, self::NIU, 4);
-
-            return self::setPosition($data, self::PLANET, 3);
-        });
-
-        $roles = $this->roles($match);
-
-        $this->assertEquals(self::HEURISTIC_RADIANT, $this->side($roles, self::HEURISTIC_RADIANT));
         $this->assertEquals(
-            [
-                self::YSR => PlayerRole::CARRY,
-                self::ZZQ => PlayerRole::HARD_SUPPORT,
-                self::ECHOZZ => PlayerRole::MIDDLE,
-                self::PLANET => PlayerRole::OFFLANE,
-                self::NIU => PlayerRole::SUPPORT,
-            ],
-            $this->side($roles, self::POSITION_DIRE),
+            [self::TIGER => PlayerRole::UNKNOWN] + self::POSITION_RADIANT + self::POSITION_DIRE,
+            $this->roles($match),
         );
     }
 
@@ -115,29 +95,15 @@ class MatchMapperPositionEstTest extends TestCase
         return ['null value' => [false], 'key removed' => [true]];
     }
 
-    public function test_duplicatedPositionResolvesWholeSideByHeuristic()
-    {
-        $match = $this->mapFixture(static fn (array $data): array => self::setPosition($data, self::XNOVA, 1));
-
-        $roles = $this->roles($match);
-
-        // два pos1 на стороне: xNova остаётся HARD_SUPPORT по эвристике
-        $this->assertEquals(self::HEURISTIC_RADIANT, $this->side($roles, self::HEURISTIC_RADIANT));
-        $this->assertEquals(self::POSITION_DIRE, $this->side($roles, self::POSITION_DIRE));
-    }
-
     #[DataProvider('invalidPositionProvider')]
-    public function test_invalidPositionResolvesWholeSideByHeuristic(mixed $value)
+    public function test_invalidPositionGivesUnknownOnlyToThatPlayer(mixed $value)
     {
-        $match = $this->mapFixture(static function (array $data) use ($value): array {
-            // у FY валидное по набору значение подменено на невалидное
-            return self::setPosition($data, self::FY, $value);
-        });
+        $match = $this->mapFixture(static fn (array $data): array => self::setPosition($data, self::FY, $value));
 
-        $roles = $this->roles($match);
-
-        $this->assertEquals(self::HEURISTIC_RADIANT, $this->side($roles, self::HEURISTIC_RADIANT));
-        $this->assertEquals(self::POSITION_DIRE, $this->side($roles, self::POSITION_DIRE));
+        $this->assertEquals(
+            [self::FY => PlayerRole::UNKNOWN] + self::POSITION_RADIANT + self::POSITION_DIRE,
+            $this->roles($match),
+        );
     }
 
     public static function invalidPositionProvider(): array
@@ -152,6 +118,17 @@ class MatchMapperPositionEstTest extends TestCase
         ];
     }
 
+    public function test_duplicatedPositionIsTakenAsIsWithoutTouchingOthers()
+    {
+        // проверки набора 1-5 на стороне нет: каждая роль берётся из position_est своего игрока
+        $match = $this->mapFixture(static fn (array $data): array => self::setPosition($data, self::XNOVA, 1));
+
+        $this->assertEquals(
+            [self::XNOVA => PlayerRole::CARRY] + self::POSITION_RADIANT + self::POSITION_DIRE,
+            $this->roles($match),
+        );
+    }
+
     public function test_invalidPositionOnRadiantDoesNotAffectDire()
     {
         $match = $this->mapFixture(function (array $data): array {
@@ -163,53 +140,38 @@ class MatchMapperPositionEstTest extends TestCase
 
         $roles = $this->roles($match);
 
-        $this->assertEquals(self::HEURISTIC_RADIANT, $this->side($roles, self::HEURISTIC_RADIANT));
+        $this->assertEquals(
+            [self::AME => PlayerRole::UNKNOWN] + self::POSITION_RADIANT,
+            $this->side($roles, self::POSITION_RADIANT),
+        );
         $this->assertSame(PlayerRole::OFFLANE, $roles[self::YSR]);
         $this->assertSame(PlayerRole::CARRY, $roles[self::NIU]);
     }
 
-    public function test_unparsedMatchResolvesBothSidesByHeuristic()
+    public function test_unparsedMatchMapsWithUnknownRoles()
     {
-        $match = $this->mapFixture(static function (array $data): array {
-            foreach ($data['players'] as &$player) {
-                unset($player['position_est']);
-            }
+        $match = $this->mapFixture(static fn (array $data): array => self::withoutPositions($data));
 
-            return $data;
-        });
-
-        $this->assertEquals(
-            self::HEURISTIC_RADIANT + [
-                self::YSR => PlayerRole::CARRY,
-                self::ZZQ => PlayerRole::HARD_SUPPORT,
-                self::ECHOZZ => PlayerRole::MIDDLE,
-                self::PLANET => PlayerRole::SUPPORT,
-                self::NIU => PlayerRole::OFFLANE,
-            ],
-            $this->roles($match),
-        );
+        $this->assertCount(10, $match->getPlayers()->getValue());
+        $this->assertSame(array_fill(0, 10, PlayerRole::UNKNOWN), array_values($this->roles($match)));
     }
 
     public function test_noMiddleLayoutWithValidPositionEstMapsByPositionEst()
     {
         $match = $this->mapFixture(static fn (array $data): array => self::removeRadiantMiddle($data));
 
-        $this->assertEquals(self::HEURISTIC_RADIANT + self::POSITION_DIRE, $this->roles($match));
+        $this->assertEquals(self::POSITION_RADIANT + self::POSITION_DIRE, $this->roles($match));
     }
 
-    public function test_noMiddleLayoutWithoutPositionEstFailsWithDomainException()
+    public function test_noMiddleLayoutWithoutPositionEstMapsWithUnknownRoles()
     {
-        // маппер раскладку принимает, ошибку даёт withResolvedRoles
-        $this->expectException(DomainException::class);
+        // раньше эвристика падала на такой раскладке с DomainException
+        $match = $this->mapFixture(
+            static fn (array $data): array => self::withoutPositions(self::removeRadiantMiddle($data)),
+        );
 
-        $this->mapFixture(static function (array $data): array {
-            $data = self::removeRadiantMiddle($data);
-            foreach ($data['players'] as &$player) {
-                unset($player['position_est']);
-            }
-
-            return $data;
-        });
+        $this->assertCount(10, $match->getPlayers()->getValue());
+        $this->assertSame(array_fill(0, 10, PlayerRole::UNKNOWN), array_values($this->roles($match)));
     }
 
     /**
@@ -230,7 +192,17 @@ class MatchMapperPositionEstTest extends TestCase
         return $data;
     }
 
-    /** Мидер Radiant уходит на сейф: на миду 0 игроков, эвристика такую раскладку не разбирает */
+    /** Нераспарсенный матч: position_est нет ни у кого */
+    private static function withoutPositions(array $data): array
+    {
+        foreach ($data['players'] as &$player) {
+            unset($player['position_est']);
+        }
+
+        return $data;
+    }
+
+    /** Мидер Radiant уходит на сейф: на миду 0 игроков */
     private static function removeRadiantMiddle(array $data): array
     {
         foreach ($data['players'] as &$player) {
@@ -277,8 +249,6 @@ class MatchMapperPositionEstTest extends TestCase
             $data = $modify($data);
         }
 
-        return $this->mapper
-            ->toEntity((new MatchExtractor())->extract($data))
-            ->withResolvedRoles($this->resolver);
+        return $this->mapper->toEntity((new MatchExtractor())->extract($data));
     }
 }
