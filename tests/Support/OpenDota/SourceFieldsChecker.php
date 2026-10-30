@@ -21,7 +21,7 @@ use ReflectionClass;
 final class SourceFieldsChecker
 {
     /**
-     * Вложенные ключи игрока матча. Захардкожены в MatchMapper (не вынесены в константы),
+     * Вложенные ключи игрока матча. Захардкожены в PlayerMapper (не вынесены в константы),
      * поэтому перечислены здесь явно. Путь через точку, достаточно одного игрока с ключом.
      */
     private const array MATCH_PLAYER_NESTED_ANY = [
@@ -29,10 +29,10 @@ final class SourceFieldsChecker
         'ability_uses.ability_lamp_use',
     ];
 
-    /** Ключи каждого элемента picks_bans[]; захардкожены в MatchMapper. */
+    /** Ключи каждого элемента picks_bans[]; захардкожены в DraftMapper. */
     private const array MATCH_PICKS_BANS_EACH = ['hero_id', 'order', 'team', 'is_pick'];
 
-    /** Тип события objectives[], которое читает MatchMapper. */
+    /** Тип события objectives[], которое читает PlayerMapper. */
     private const string MINIBOSS_OBJECTIVE_TYPE = 'CHAT_MESSAGE_MINIBOSS_KILL';
 
     /**
