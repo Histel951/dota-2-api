@@ -4,16 +4,16 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Cluster;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
+use Histel951\Dota2Api\SharedKernel\Duration;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueName;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchOutcome;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 use Histel951\Dota2Api\Domain\Entities\TeamMatch\TeamMatch;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use Throwable;
 
 class TeamMatchOpenDotaMapper extends AbstractMapper
@@ -38,7 +38,7 @@ class TeamMatchOpenDotaMapper extends AbstractMapper
     private const array OPTIONAL_FIELDS = ['opposing_team_name'];
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     public function toEntity(array $data): TeamMatch
     {
@@ -51,7 +51,7 @@ class TeamMatchOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     private function createTeamMatch(array $data, array $optional, MatchOutcome $outcome): TeamMatch
     {
@@ -67,7 +67,7 @@ class TeamMatchOpenDotaMapper extends AbstractMapper
                 opposingTeamName: new TeamName($optional['opposing_team_name'])
             );
         } catch (Throwable $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 

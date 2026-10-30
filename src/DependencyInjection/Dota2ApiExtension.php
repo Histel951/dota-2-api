@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\DependencyInjection;
 
-use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
+use Histel951\Dota2Api\Client\Config\ApiSource;
+use Histel951\Dota2Api\Infrastructure\OpenDota\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaProviderFactory;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ProviderFactory;
 use Symfony\Component\Config\Definition\Exception\InvalidConfigurationException;

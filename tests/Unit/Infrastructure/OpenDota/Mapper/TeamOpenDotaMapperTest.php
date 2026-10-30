@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
 use PHPUnit\Framework\TestCase;
 
@@ -79,12 +79,12 @@ class TeamOpenDotaMapperTest extends TestCase
         $this->assertSame(516, $team->getStats()->getLosses());
     }
 
-    public function test_toEntityThrowsMappingExceptionWhenRequiredFieldMissing()
+    public function test_toEntityThrowsSourceDataExceptionWhenRequiredFieldMissing()
     {
         $data = self::load('team_8261500.json');
         unset($data['tag']);
 
-        $this->expectException(MappingException::class);
+        $this->expectException(SourceDataException::class);
 
         (new TeamOpenDotaMapper())->toEntity($data);
     }

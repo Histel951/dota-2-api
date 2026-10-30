@@ -4,12 +4,12 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidStatsException;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
+use Histel951\Dota2Api\SharedKernel\PlayerId;
+use Histel951\Dota2Api\SharedKernel\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\WinrateStats;
 use Histel951\Dota2Api\Domain\Entities\TeamPlayer\TeamPlayer;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use Throwable;
 
 class TeamPlayerOpenDotaMapper extends AbstractMapper
@@ -29,7 +29,7 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
     private const array OPTIONAL_FIELDS = ['name', 'is_current_team_member'];
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      * @throws InvalidStatsException
      */
     function toEntity(array $data): TeamPlayer
@@ -43,7 +43,7 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     private function createTeamPlayer(array $data, array $optional, WinrateStats $stats): TeamPlayer
     {
@@ -55,7 +55,7 @@ class TeamPlayerOpenDotaMapper extends AbstractMapper
                 isCurrentTeamMember: $optional['is_current_team_member'] ?? false
             );
         } catch (Throwable $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 }

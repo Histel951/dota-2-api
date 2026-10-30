@@ -3,8 +3,8 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Domain\Entities\TeamPlayer;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
+use Histel951\Dota2Api\SharedKernel\PlayerId;
+use Histel951\Dota2Api\SharedKernel\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\WinrateStats;
 
 final readonly class TeamPlayer

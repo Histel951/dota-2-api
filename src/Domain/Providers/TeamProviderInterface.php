@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Providers;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamId;
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
 use Histel951\Dota2Api\Domain\Entities\TeamHero\TeamHero;
 use Histel951\Dota2Api\Domain\Entities\TeamMatch\TeamMatch;

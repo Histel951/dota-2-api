@@ -4,32 +4,31 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
-use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidCounterException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidDurationException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidDurationException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidGPMException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidHeroIdException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidHeroIdException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidKDAException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerIdException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidPlayerNameException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidRegionException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamIdException;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidTeamNameException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidMatchIdException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidPlayerIdException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidPlayerNameException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidTeamIdException;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidTeamNameException;
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidXPMException;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
+use Histel951\Dota2Api\SharedKernel\Duration;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\GoldSpent;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\GPM;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
+use Histel951\Dota2Api\SharedKernel\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\NetWorth;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
+use Histel951\Dota2Api\SharedKernel\PlayerId;
+use Histel951\Dota2Api\SharedKernel\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Region;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalGold;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalXP;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\XPM;
@@ -77,8 +76,8 @@ use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\TowerKills;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\UtilityStats;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\WardingStats;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use TypeError;
 
 class MatchOpenDotaMapper extends AbstractMapper
@@ -106,16 +105,16 @@ class MatchOpenDotaMapper extends AbstractMapper
     ];
 
     /**
-     * Любая ошибка данных (доменная валидация, неожиданный тип поля) отдаётся как MappingException
+     * Любая ошибка данных (доменная валидация, неожиданный тип поля) отдаётся как SourceDataException
      *
-     * @throws MappingException
+     * @throws SourceDataException
      */
     public function toEntity(array $data): MatchDetail
     {
         try {
             return $this->createMatch($data);
-        } catch (DomainException|InvalidRegionException|TypeError $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+        } catch (DomainException|TypeError $e) {
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
@@ -126,7 +125,7 @@ class MatchOpenDotaMapper extends AbstractMapper
      * @throws InvalidKDAException
      * @throws InvalidHeroIdException
      * @throws InvalidMatchIdException
-     * @throws MappingException
+     * @throws SourceDataException
      * @throws InvalidPlayerIdException
      * @throws InvalidTeamIdException
      * @throws InvalidTeamNameException

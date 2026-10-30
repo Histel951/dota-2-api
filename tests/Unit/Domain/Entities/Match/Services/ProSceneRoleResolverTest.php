@@ -4,14 +4,14 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Domain\Entities\Match\Services;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
-use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\GoldSpent;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\GPM;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
+use Histel951\Dota2Api\SharedKernel\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\KDA;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\NetWorth;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\PlayerName;
+use Histel951\Dota2Api\SharedKernel\PlayerId;
+use Histel951\Dota2Api\SharedKernel\PlayerName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalGold;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\TotalXP;

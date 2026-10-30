@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Services;
 
-use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
 
 interface RoleResolverInterface

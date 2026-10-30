@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Common\Exceptions;
 
-use InvalidArgumentException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 
-class InvalidRegionException extends InvalidArgumentException
+class InvalidRegionException extends DomainException
 {
     public static function invalidRegionId(int $regionId): self
     {

@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Entities\TeamHero\TeamHero;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
 use PHPUnit\Framework\TestCase;
 
@@ -33,12 +33,12 @@ class TeamHeroOpenDotaMapperTest extends TestCase
         $this->assertSame(83, $first->getStats()->getGamesWon());
     }
 
-    public function test_toEntityThrowsMappingExceptionWhenRequiredFieldMissing()
+    public function test_toEntityThrowsSourceDataExceptionWhenRequiredFieldMissing()
     {
         $data = self::load()[0];
         unset($data['localized_name']);
 
-        $this->expectException(MappingException::class);
+        $this->expectException(SourceDataException::class);
 
         (new TeamHeroOpenDotaMapper())->toEntity($data);
     }

@@ -3,8 +3,8 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Domain\Entities\Match;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\Duration;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\Duration;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Region;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\Draft;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayers;

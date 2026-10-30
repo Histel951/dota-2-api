@@ -3,15 +3,15 @@ declare(strict_types=1);
 
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamId;
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
 use Histel951\Dota2Api\Domain\Entities\TeamHero\TeamHero;
 use Histel951\Dota2Api\Domain\Entities\TeamMatch\TeamMatch;
 use Histel951\Dota2Api\Domain\Entities\TeamPlayer\TeamPlayer;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
-use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
+use Histel951\Dota2Api\Exception\SourceRequestException;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
@@ -31,9 +31,9 @@ class OpenDotaTeamProvider implements TeamProviderInterface
 
     /**
      * @return Team[]
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      *
-     * @throws MappingException
+     * @throws SourceDataException
      */
     public function getTeams(): array
     {
@@ -42,8 +42,8 @@ class OpenDotaTeamProvider implements TeamProviderInterface
     }
 
     /**
-     * @throws MappingException
-     * @throws ApiGatewayException
+     * @throws SourceDataException
+     * @throws SourceRequestException
      */
     public function getTeam(TeamId $id): Team
     {
@@ -53,9 +53,9 @@ class OpenDotaTeamProvider implements TeamProviderInterface
 
     /**
      * @return TeamMatch[]
-     * @throws MappingException
+     * @throws SourceDataException
      *
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      */
     public function getMatchesByTeam(TeamId $teamId): array
     {
@@ -65,9 +65,9 @@ class OpenDotaTeamProvider implements TeamProviderInterface
 
     /**
      * @return TeamPlayer[]
-     * @throws MappingException
+     * @throws SourceDataException
      *
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      */
     public function getPlayersByTeam(TeamId $teamId): array
     {
@@ -77,9 +77,9 @@ class OpenDotaTeamProvider implements TeamProviderInterface
 
     /**
      * @return TeamHero[]
-     * @throws MappingException
+     * @throws SourceDataException
      *
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      */
     public function getHeroesByTeam(TeamId $teamId): array
     {
