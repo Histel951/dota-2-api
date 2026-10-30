@@ -4,12 +4,12 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidStatsException;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroId;
+use Histel951\Dota2Api\SharedKernel\HeroId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\HeroName;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\WinrateStats;
 use Histel951\Dota2Api\Domain\Entities\TeamHero\TeamHero;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use Throwable;
 
 class TeamHeroOpenDotaMapper extends AbstractMapper
@@ -22,7 +22,7 @@ class TeamHeroOpenDotaMapper extends AbstractMapper
     ];
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      * @throws InvalidStatsException
      */
     public function toEntity(array $data): TeamHero
@@ -35,7 +35,7 @@ class TeamHeroOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     private function createTeamHero(array $data, WinrateStats $stats): TeamHero
     {
@@ -46,7 +46,7 @@ class TeamHeroOpenDotaMapper extends AbstractMapper
                 stats: $stats
             );
         } catch (Throwable $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 }

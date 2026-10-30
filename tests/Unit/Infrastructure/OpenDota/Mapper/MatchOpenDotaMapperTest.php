@@ -4,13 +4,13 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
-use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Side;
 use Histel951\Dota2Api\Domain\Entities\Match\MatchDetail;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerPerformance;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -116,7 +116,7 @@ class MatchOpenDotaMapperTest extends TestCase
         $this->assertNull($match->getDire()->getTeamName()->getValue());
     }
 
-    public function test_toEntityWrapsDomainErrorIntoMappingException()
+    public function test_toEntityWrapsDomainErrorIntoSourceDataException()
     {
         try {
             $this->mapFixture(static function (array $data): array {
@@ -126,13 +126,13 @@ class MatchOpenDotaMapperTest extends TestCase
 
                 return $data;
             });
-            $this->fail('MappingException expected');
-        } catch (MappingException $e) {
+            $this->fail('SourceDataException expected');
+        } catch (SourceDataException $e) {
             $this->assertInstanceOf(DomainException::class, $e->getPrevious());
         }
     }
 
-    public function test_toEntityWrapsUnexpectedFieldTypeIntoMappingException()
+    public function test_toEntityWrapsUnexpectedFieldTypeIntoSourceDataException()
     {
         try {
             $this->mapFixture(static function (array $data): array {
@@ -140,8 +140,8 @@ class MatchOpenDotaMapperTest extends TestCase
 
                 return $data;
             });
-            $this->fail('MappingException expected');
-        } catch (MappingException $e) {
+            $this->fail('SourceDataException expected');
+        } catch (SourceDataException $e) {
             $this->assertInstanceOf(TypeError::class, $e->getPrevious());
         }
     }

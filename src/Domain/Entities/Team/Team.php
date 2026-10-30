@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Domain\Entities\Team;
 
 use DateTimeImmutable;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamStats;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
 

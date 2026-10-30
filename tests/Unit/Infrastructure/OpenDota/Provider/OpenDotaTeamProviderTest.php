@@ -4,13 +4,13 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
 use DateTimeImmutable;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamStats;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
-use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
+use Histel951\Dota2Api\Exception\SourceRequestException;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
@@ -83,14 +83,14 @@ class OpenDotaTeamProviderTest extends TestCase
 
     public function test_getTeamsReturnsApiFails()
     {
-        $exception = new ApiGatewayException('Network error.');
+        $exception = new SourceRequestException('Network error.');
         $this->gateway
             ->expects($this->once())
             ->method('get')
             ->with('teams')
             ->willThrowException($exception);
 
-        $this->expectException(ApiGatewayException::class);
+        $this->expectException(SourceRequestException::class);
         $this->expectExceptionMessage($exception->getMessage());
 
         $this->provider->getTeams();
@@ -118,7 +118,7 @@ class OpenDotaTeamProviderTest extends TestCase
             ->with('teams')
             ->willReturn($apiResponse);
 
-        $exception = new MappingException('Missing required field "rating" in API response');
+        $exception = new SourceDataException('Missing required field "rating" in API response');
 
         $this->teamMapper
             ->expects($this->once())
@@ -126,7 +126,7 @@ class OpenDotaTeamProviderTest extends TestCase
             ->with($apiResponse)
             ->willThrowException($exception);
 
-        $this->expectException(MappingException::class);
+        $this->expectException(SourceDataException::class);
         $this->expectExceptionMessage($exception->getMessage());
 
         $this->provider->getTeams();
@@ -158,7 +158,7 @@ class OpenDotaTeamProviderTest extends TestCase
     public function test_getTeamReturnsTeamWhenApiFails()
     {
         $teamId = new TeamId(7119388);
-        $exception = new ApiGatewayException('Network error.');
+        $exception = new SourceRequestException('Network error.');
 
         $this->gateway
             ->expects($this->once())
@@ -166,7 +166,7 @@ class OpenDotaTeamProviderTest extends TestCase
             ->with(sprintf('teams/%s', $teamId->getValue()))
             ->willThrowException($exception);
 
-        $this->expectException(ApiGatewayException::class);
+        $this->expectException(SourceRequestException::class);
         $this->expectExceptionMessage($exception->getMessage());
 
         $this->provider->getTeam($teamId);
@@ -184,7 +184,7 @@ class OpenDotaTeamProviderTest extends TestCase
             ->with(sprintf('teams/%s', $teamId->getValue()))
             ->willReturn($apiResponse);
 
-        $exception = new MappingException('Missing required field "rating" in API response');
+        $exception = new SourceDataException('Missing required field "rating" in API response');
 
         $this->teamMapper
             ->expects($this->once())
@@ -192,7 +192,7 @@ class OpenDotaTeamProviderTest extends TestCase
             ->with($apiResponse)
             ->willThrowException($exception);
 
-        $this->expectException(MappingException::class);
+        $this->expectException(SourceDataException::class);
         $this->expectExceptionMessage($exception->getMessage());
 
         $this->provider->getTeam($teamId);

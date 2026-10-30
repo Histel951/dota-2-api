@@ -8,7 +8,7 @@ use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\TeamProviderInterface;
 use Histel951\Dota2Api\Domain\Services\RoleResolverInterface;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;

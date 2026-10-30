@@ -4,13 +4,13 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Provider;
 
 use Generator;
-use Histel951\Dota2Api\Domain\Common\Exceptions\InvalidMatchIdException;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\Exception\InvalidMatchIdException;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Providers\MatchesProviderInterface;
 use Histel951\Dota2Api\Domain\Providers\Results\MatchFetchResult;
-use Histel951\Dota2Api\Infrastructure\Exceptions\ApiGatewayException;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
-use Histel951\Dota2Api\Infrastructure\Http\Enums\HttpMethod;
+use Histel951\Dota2Api\Exception\SourceRequestException;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
+use Histel951\Dota2Api\Infrastructure\Http\HttpMethod;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\Provider\Contracts\ExtractorInterface;
 use SplObjectStorage;
@@ -31,7 +31,7 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
     /**
      * @param MatchId $id
      * @return MatchFetchResult
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      */
     public function getMatch(MatchId $id): MatchFetchResult
     {
@@ -55,7 +55,7 @@ class OpenDotaMatchProvider implements MatchesProviderInterface
      * @param MatchId[] $ids
      * @param int $concurrency
      * @return Generator
-     * @throws ApiGatewayException
+     * @throws SourceRequestException
      * @throws InvalidMatchIdException
      * @throws TransportExceptionInterface
      */

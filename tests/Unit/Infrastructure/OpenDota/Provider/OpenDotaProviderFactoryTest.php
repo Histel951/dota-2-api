@@ -4,8 +4,8 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
-use Histel951\Dota2Api\Infrastructure\Http\Contracts\ApiGatewayInterface;
+use Histel951\Dota2Api\SharedKernel\MatchId;
+use Histel951\Dota2Api\Infrastructure\Http\ApiGatewayInterface;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaProviderFactory;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;

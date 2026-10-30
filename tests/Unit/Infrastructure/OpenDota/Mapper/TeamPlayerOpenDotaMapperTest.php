@@ -4,7 +4,7 @@ declare(strict_types = 1);
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Mapper;
 
 use Histel951\Dota2Api\Domain\Entities\TeamPlayer\TeamPlayer;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
+use Histel951\Dota2Api\Exception\SourceDataException;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
 use PHPUnit\Framework\TestCase;
 
@@ -82,9 +82,9 @@ class TeamPlayerOpenDotaMapperTest extends TestCase
         $this->assertFalse($player->isCurrentTeamMember());
     }
 
-    public function test_toEntityThrowsMappingExceptionWhenAccountIdMissing()
+    public function test_toEntityThrowsSourceDataExceptionWhenAccountIdMissing()
     {
-        $this->expectException(MappingException::class);
+        $this->expectException(SourceDataException::class);
 
         (new TeamPlayerOpenDotaMapper())->toEntity([
             'name' => 'Ame',

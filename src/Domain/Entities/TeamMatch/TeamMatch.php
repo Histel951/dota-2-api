@@ -7,10 +7,10 @@ use DateTimeImmutable;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Cluster;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\LeagueName;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchOutcome;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 
 final readonly class TeamMatch
 {

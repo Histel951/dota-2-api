@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Histel951\Dota2Api\Domain\Entities\Match\Services;
 
 use Histel951\Dota2Api\Domain\Common\Enums\PlayerRole;
-use Histel951\Dota2Api\Domain\Common\Exceptions\DomainException;
+use Histel951\Dota2Api\SharedKernel\Exception\DomainException;
 use Histel951\Dota2Api\Domain\Common\ValueObjects\Role;
 use Histel951\Dota2Api\Domain\Entities\Match\Enums\Lane;
 use Histel951\Dota2Api\Domain\Entities\Match\ValueObjects\MatchPlayerLane;

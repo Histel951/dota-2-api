@@ -3,13 +3,13 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Tests\Unit\Infrastructure\OpenDota\Provider;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\MatchId;
+use Histel951\Dota2Api\SharedKernel\MatchId;
 use Histel951\Dota2Api\Domain\Entities\Match\Services\ProSceneRoleResolver;
 use Histel951\Dota2Api\Infrastructure\Http\ApiGateway;
-use Histel951\Dota2Api\Infrastructure\Http\ConfigurationHttpClient;
-use Histel951\Dota2Api\Infrastructure\Http\Enums\ApiSource;
+use Histel951\Dota2Api\Client\Config\ClientConfig;
+use Histel951\Dota2Api\Client\Config\ApiSource;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Http\OpenDotaHttpClientFactory;
+use Histel951\Dota2Api\Infrastructure\OpenDota\OpenDotaHttpClientFactory;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Provider\OpenDotaMatchProvider;
 use JsonException;
@@ -67,7 +67,7 @@ class OpenDotaMatchProviderTest extends TestCase
     {
         $httpClient = OpenDotaHttpClientFactory::create(
             new MockHttpClient($responses),
-            new ConfigurationHttpClient(baseUrl: 'https://api.opendota.com/api/', apiSource: ApiSource::OPENDOTA),
+            new ClientConfig(baseUrl: 'https://api.opendota.com/api/', apiSource: ApiSource::OPENDOTA),
         );
 
         return new OpenDotaMatchProvider(

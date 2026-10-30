@@ -3,14 +3,14 @@ declare(strict_types = 1);
 
 namespace Histel951\Dota2Api\Infrastructure\OpenDota\Mapper;
 
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamId;
-use Histel951\Dota2Api\Domain\Common\ValueObjects\TeamName;
+use Histel951\Dota2Api\SharedKernel\TeamId;
+use Histel951\Dota2Api\SharedKernel\TeamName;
 use Histel951\Dota2Api\Domain\Entities\Team\Exceptions\InvalidTeamStatsException;
 use Histel951\Dota2Api\Domain\Entities\Team\Team;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamStats;
 use Histel951\Dota2Api\Domain\Entities\Team\ValueObjects\TeamTag;
-use Histel951\Dota2Api\Infrastructure\Exceptions\MappingException;
-use Histel951\Dota2Api\Infrastructure\Mapper\AbstractMapper;
+use Histel951\Dota2Api\Exception\SourceDataException;
+use Histel951\Dota2Api\Infrastructure\Mapping\AbstractMapper;
 use Throwable;
 
 class TeamOpenDotaMapper extends AbstractMapper
@@ -30,7 +30,7 @@ class TeamOpenDotaMapper extends AbstractMapper
     private const array OPTIONAL_FIELDS = ['name'];
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     public function toEntity(array $data): Team
     {
@@ -43,7 +43,7 @@ class TeamOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     private function createTeam(array $data, array $optional, TeamStats $stats): Team
     {
@@ -56,7 +56,7 @@ class TeamOpenDotaMapper extends AbstractMapper
                 lastMatchTime: $this->createDateTime($data['last_match_time']),
             );
         } catch (Throwable $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 
@@ -77,14 +77,14 @@ class TeamOpenDotaMapper extends AbstractMapper
     }
 
     /**
-     * @throws MappingException
+     * @throws SourceDataException
      */
     private function createTeamStats(array $data): TeamStats
     {
         try {
             return TeamStats::fromApi(wins: $data['wins'], losses: $data['losses'], rating: $data['rating']);
         } catch (InvalidTeamStatsException $e) {
-            throw new MappingException($e->getMessage(), $e->getCode(), $e);
+            throw new SourceDataException($e->getMessage(), $e->getCode(), $e);
         }
     }
 }
