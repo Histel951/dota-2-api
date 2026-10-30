@@ -37,5 +37,6 @@ Symfony-бандл (`histel951/dota-2-api`, тип `symfony-bundle`) для за
 ## Прочее в корне
 
 - `examples/fetch_match.php` — сборка клиента без Symfony и вывод статистики матча
+- `tools/refresh-opendota-fixtures.php` — дифф ключей живого OpenDota с фикстурами и их обновление (dev)
 - `config/packages/dota2_api.yaml` — пример конфигурации для приложения-потребителя
 - `promt.md`, `test.php` — локальные черновики, в `.gitignore`

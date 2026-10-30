@@ -18,7 +18,8 @@ model: sonnet
 Прочитай раздел «Тесты» в `.claude/docs/conventions.md`, затем существующие тесты в том
 же неймспейсе и повтори их стиль. Эталоны:
 
-- маппер на реальной фикстуре — `tests/Unit/Infrastructure/OpenDota/Mapper/MatchOpenDotaMapperTest.php`;
+- маппер на реальной фикстуре — `tests/Unit/Infrastructure/OpenDota/Mapper/MatchOpenDotaMapperTest.php`, `Team*OpenDotaMapperTest.php`;
+- поля источника по фикстуре — `tests/Unit/Infrastructure/OpenDota/SourceFields/*` поверх `tests/Support/OpenDota/SourceFieldsChecker`;
 - провайдер с моками gateway и мапперов — `tests/Unit/Infrastructure/OpenDota/Provider/OpenDotaTeamProviderTest.php`;
 - доменный сервис на синтетических данных — `tests/Unit/Domain/Entities/Match/Services/ProSceneRoleResolverTest.php`;
 - DI — `tests/Unit/DependencyInjection/Dota2ApiExtensionTest.php`;
@@ -35,7 +36,10 @@ model: sonnet
    Доменные объекты (VO, сущности) не мокаем — создаём настоящие.
 4. Данные источника — из реальных ответов: фикстуры в `tests/Fixtures/opendota/`
    (`match_8794744726.json` — полный матч). Ожидаемые значения в тесте сверяй с
-   фикстурой, а не придумывай. Для редких раскладок (роли, отсутствующие поля) — синтетика
+   фикстурой, а не придумывай. Новая фикстура — реальный ответ через
+   `php tools/refresh-opendota-fixtures.php --write` (эндпоинт добавляется в скрипт), не руками;
+   новый эндпоинт получает `check*()` в `SourceFieldsChecker` и кейс в `SourceFields/`. Скрипт
+   ходит в сеть — в тестах его не вызываем. Для редких раскладок (роли, отсутствующие поля) — синтетика
    в тесте, как в `ProSceneRoleResolverTest`.
 5. Не только happy path: невалидные значения VO → `Invalid*Exception`; отсутствующее
    обязательное поле и неожиданный тип → `MappingException`; нераспарсенный матч;
