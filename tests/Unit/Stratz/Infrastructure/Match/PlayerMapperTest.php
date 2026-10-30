@@ -15,6 +15,7 @@ use Histel951\Dota2Api\Stratz\Match\Domain\Player\Position;
 use Histel951\Dota2Api\Tests\Support\Stratz\StratzFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use TypeError;
 
 class PlayerMapperTest extends TestCase
 {
@@ -228,14 +229,38 @@ class PlayerMapperTest extends TestCase
         $this->assertSame(3, $stats->getBuybacks()?->getValue());
     }
 
-    public function test_mapWithoutOptionalNumbersGivesZeros()
+    /**
+     * Базовые показатели STRATZ отдаёт всегда (и у нераспарсенных матчей): пропуск — битый ответ, а не 0
+     */
+    #[DataProvider('baseFieldProvider')]
+    public function test_mapWithoutBaseFieldFails(string $field)
     {
-        $player = $this->mapper->map(['steamAccountId' => 5, 'heroId' => 1], false);
+        $raw = $this->createRaw();
+        unset($raw[$field]);
 
-        $this->assertSame(0, $player->getKda()->getKills());
-        $this->assertSame(0, $player->getEconomy()->getGpm()->getValue());
-        $this->assertSame(0, $player->getDamage()->getHeroDamage()->getValue());
-        $this->assertSame(0, $player->getFarm()->getLastHits()->getValue());
+        $this->expectException(TypeError::class);
+
+        $this->mapper->map($raw, false);
+    }
+
+    public static function baseFieldProvider(): array
+    {
+        return array_map(static fn(string $field): array => [$field], [
+            'kills' => 'kills', 'deaths' => 'deaths', 'assists' => 'assists',
+            'goldPerMinute' => 'goldPerMinute', 'experiencePerMinute' => 'experiencePerMinute',
+            'networth' => 'networth', 'goldSpent' => 'goldSpent', 'heroDamage' => 'heroDamage',
+            'towerDamage' => 'towerDamage', 'heroHealing' => 'heroHealing',
+            'numLastHits' => 'numLastHits', 'numDenies' => 'numDenies',
+        ]);
+    }
+
+    public function test_mapWithoutOptionalIdentityFieldsGivesDefaults()
+    {
+        $raw = $this->createRaw();
+        unset($raw['isRadiant']);
+
+        $player = $this->mapper->map($raw, false);
+
         $this->assertSame(Lane::UNKNOWN, $player->getIdentity()->getLane());
         $this->assertTrue($player->getIdentity()->isDire());
         $this->assertNull($player->getIdentity()->getProName());
@@ -370,6 +395,15 @@ class PlayerMapperTest extends TestCase
                 'kills' => 1,
                 'deaths' => 2,
                 'assists' => 3,
+                'goldPerMinute' => 400,
+                'experiencePerMinute' => 500,
+                'networth' => 10000,
+                'goldSpent' => 9000,
+                'heroDamage' => 15000,
+                'towerDamage' => 2000,
+                'heroHealing' => 0,
+                'numLastHits' => 150,
+                'numDenies' => 10,
             ],
             $overrides,
         );

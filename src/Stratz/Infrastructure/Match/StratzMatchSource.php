@@ -12,7 +12,7 @@ use Histel951\Dota2Api\Stratz\Match\Domain\MatchDetail;
 use Histel951\Dota2Api\Stratz\Match\Port\MatchSourceInterface;
 use SplObjectStorage;
 use SplQueue;
-use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
@@ -80,7 +80,7 @@ final class StratzMatchSource implements MatchSourceInterface
                     if (!$chunk->isLast()) {
                         continue;
                     }
-                } catch (TransportExceptionInterface $e) {
+                } catch (ExceptionInterface $e) {
                     $ids = $chunks[$response];
                     unset($pending[spl_object_id($response)], $chunks[$response]);
 
