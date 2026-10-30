@@ -157,7 +157,7 @@ class SourceFieldsCheckerTest extends TestCase
         $violations = SourceFieldsChecker::checkTeamHeroes([['hero_id' => 1]]);
 
         $this->assertNotEmpty($violations);
-        $this->assertStringContainsString('TeamHeroOpenDotaMapper::REQUIRED_FIELDS', $violations[0]);
+        $this->assertStringContainsString('TeamHeroMapper::REQUIRED_FIELDS', $violations[0]);
     }
 
     public function test_checkTeamReportsNullRequiredField()

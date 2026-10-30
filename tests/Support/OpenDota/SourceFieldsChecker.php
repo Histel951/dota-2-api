@@ -5,10 +5,10 @@ namespace Histel951\Dota2Api\Tests\Support\OpenDota;
 
 use Histel951\Dota2Api\Infrastructure\OpenDota\Extractor\MatchExtractor;
 use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\MatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamHeroOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamMatchOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamOpenDotaMapper;
-use Histel951\Dota2Api\Infrastructure\OpenDota\Mapper\TeamPlayerOpenDotaMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamHeroMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMatchMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamMapper;
+use Histel951\Dota2Api\Infrastructure\OpenDota\Team\TeamPlayerMapper;
 use LogicException;
 use ReflectionClass;
 
@@ -253,7 +253,7 @@ final class SourceFieldsChecker
     {
         return self::checkMapperList(
             [$team],
-            TeamOpenDotaMapper::class,
+            TeamMapper::class,
             sprintf('teams/%s', $team['team_id'] ?? '?'),
         );
     }
@@ -266,7 +266,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeams(array $teams): array
     {
-        return self::checkMapperList($teams, TeamOpenDotaMapper::class, 'teams');
+        return self::checkMapperList($teams, TeamMapper::class, 'teams');
     }
 
     /**
@@ -277,7 +277,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeamMatches(array $matches): array
     {
-        return self::checkMapperList($matches, TeamMatchOpenDotaMapper::class, 'teams/{id}/matches');
+        return self::checkMapperList($matches, TeamMatchMapper::class, 'teams/{id}/matches');
     }
 
     /**
@@ -288,7 +288,7 @@ final class SourceFieldsChecker
      */
     public static function checkTeamPlayers(array $players): array
     {
-        return self::checkMapperList($players, TeamPlayerOpenDotaMapper::class, 'teams/{id}/players');
+        return self::checkMapperList($players, TeamPlayerMapper::class, 'teams/{id}/players');
     }
 
     /**
@@ -299,12 +299,12 @@ final class SourceFieldsChecker
      */
     public static function checkTeamHeroes(array $heroes): array
     {
-        return self::checkMapperList($heroes, TeamHeroOpenDotaMapper::class, 'teams/{id}/heroes');
+        return self::checkMapperList($heroes, TeamHeroMapper::class, 'teams/{id}/heroes');
     }
 
     /**
      * REQUIRED/OPTIONAL маппера применяются к списку элементов. Пустой ответ — нарушение.
-     * Константа OPTIONAL_FIELDS необязательна (у TeamHeroOpenDotaMapper её нет).
+     * Константа OPTIONAL_FIELDS необязательна (у TeamHeroMapper её нет).
      *
      * @param list<array<string, mixed>> $items
      * @param class-string $mapper
